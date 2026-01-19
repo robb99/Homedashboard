@@ -234,7 +234,7 @@ body {
   display: flex;
   flex-direction: column; /* Keep vertical stacking */
   gap: 8px;
-  max-height: 460px; /* Increased height to show 5 items */
+  max-height: 375px; /* Adjusted height to show exactly 5 items (5 * 75px) */
   overflow-y: auto;
   justify-content: flex-start; /* Ensure items align to the start */
 }
