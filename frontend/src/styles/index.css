@@ -360,7 +360,7 @@ body {
 .plex-item {
   display: flex;
   gap: 12px;
-  padding: 10px;
+  padding: 8px; /* Reduced padding */
   background: var(--bg-secondary);
   border-radius: 8px;
 }
@@ -407,7 +407,7 @@ body {
 .plex-added {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 2px; /* Reduced margin */
 }
 
 /* Error State */
