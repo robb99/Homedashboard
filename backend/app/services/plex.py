@@ -48,10 +48,10 @@ class PlexService:
                 for item in metadata[:10]:  # Limit to 10 items
                     added_at = datetime.fromtimestamp(item.get("addedAt", 0))
 
-                    thumb = item.get("thumb")
-                    if thumb:
+                    thumb_path = item.get("thumb") or item.get("grandparentThumb")
+                    if thumb_path:
                         # Plex often returns relative URLs for thumbs, prepend the base URL
-                        thumb_url = f"{self.settings.plex_url}{thumb}"
+                        thumb_url = f"{self.settings.plex_url}{thumb_path}"
                     else:
                         thumb_url = None
 

@@ -4,14 +4,14 @@ import { formatRelativeTime } from '../hooks/useDashboard';
 
 function PlexItem({ item }) {
   const getDisplayTitle = () => {
-    if (item.type === 'episode' && item.grandparent_title) {
+    if ((item.type === 'episode' || item.type === 'season') && item.grandparent_title) {
       return item.grandparent_title;
     }
     return item.title;
   };
 
   const getSubtitle = () => {
-    if (item.type === 'episode') {
+    if (item.type === 'episode' || item.type === 'season') {
       return item.title;
     }
     if (item.year) {
