@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time, timezone
 import logging
 import os.path
 
@@ -92,9 +92,9 @@ class CalendarService:
                     last_updated=datetime.now(),
                 )
 
-            now = datetime.utcnow()
-            time_min = now.isoformat() + "Z"
-            time_max = (now + timedelta(days=7)).isoformat() + "Z"
+            now = datetime.now(timezone.utc)
+            time_min = now.isoformat()
+            time_max = (now + timedelta(days=7)).isoformat()
 
             all_events = []
 
@@ -126,18 +126,21 @@ class CalendarService:
 
                         # Handle all-day events vs timed events
                         if "date" in start:
-                            start_dt = datetime.fromisoformat(start["date"])
-                            end_dt = datetime.fromisoformat(end["date"])
+                            # All-day event: date-only -> make it UTC-aware at midnight
+                            start_d = date.fromisoformat(start["date"])
+                            end_d = date.fromisoformat(end["date"])
+                            start_dt = datetime.combine(start_d, time.min, tzinfo=timezone.utc)
+                            end_dt = datetime.combine(end_d, time.min, tzinfo=timezone.utc)
                             all_day = True
-                        else:
+                        else: 
                             start_str = start.get("dateTime", "")
                             end_str = end.get("dateTime", "")
                             # Handle timezone offset
                             start_dt = datetime.fromisoformat(
-                                start_str.replace("Z", "+00:00")
+                                start_str.replace("Z", "+00:00").astimezone(timezone.utc)
                             )
                             end_dt = datetime.fromisoformat(
-                                end_str.replace("Z", "+00:00")
+                                end_str.replace("Z", "+00:00").astimezone(timezone.utc)
                             )
                             all_day = False
 
@@ -162,7 +165,7 @@ class CalendarService:
                 status=StatusLevel.HEALTHY if all_events else StatusLevel.UNKNOWN,
                 events=all_events,
                 event_count=len(all_events),
-                last_updated=datetime.now(),
+                last_updated=datetime.now(timezone.utc),
             )
 
             await cache_service.set(CACHE_KEY, result)
