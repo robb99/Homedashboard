@@ -94,6 +94,7 @@ class UnifiService:
                 clients_data = clients_response.json().get("data", [])
 
                 clients = []
+                wireless_clients = 0
                 for c in clients_data:
                     client_obj = UnifiClient(
                         hostname=c.get("hostname") or c.get("name"),
@@ -103,6 +104,20 @@ class UnifiService:
                         is_wired=c.get("is_wired", False),
                     )
                     clients.append(client_obj)
+                    if not client_obj.is_wired:
+                        wireless_clients += 1
+
+                # Get dashboard stats for 24h data usage
+                dashboard_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/dashboard"
+                dashboard_response = await client.get(dashboard_url, cookies=self._cookies)
+                dashboard_data = dashboard_response.json().get("data", [])
+                
+                # Find the 24-hour WAN traffic stat
+                data_usage_24h = 0
+                for stat in dashboard_data:
+                    if stat.get("name") == "wan-tx_bytes-r" and stat.get("cat") == "traffic":
+                        data_usage_24h = stat.get("bytes", 0)
+                        break
 
                 # Determine overall status
                 if devices_offline > 0:
@@ -120,6 +135,8 @@ class UnifiService:
                     client_count=len(clients),
                     devices_online=devices_online,
                     devices_offline=devices_offline,
+                    wireless_clients=wireless_clients,
+                    data_usage_24h=data_usage_24h,
                     last_updated=datetime.now(),
                 )
 

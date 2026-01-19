@@ -1,5 +1,6 @@
 import React from 'react';
 import { StatusCard } from './StatusCard';
+import { formatBytes } from '../hooks/useDashboard';
 
 export function UnifiCard({ data }) {
   if (!data) return null;
@@ -14,8 +15,8 @@ export function UnifiCard({ data }) {
     >
       <div className="metrics-grid">
         <div className="metric">
-          <div className="metric-label">Devices Online</div>
-          <div className="metric-value">{data.devices_online}</div>
+          <div className="metric-label">Wireless Clients</div>
+          <div className="metric-value">{data.wireless_clients}</div>
         </div>
         <div className="metric">
           <div className="metric-label">Devices Offline</div>
@@ -26,8 +27,8 @@ export function UnifiCard({ data }) {
           <div className="metric-value">{data.client_count}</div>
         </div>
         <div className="metric">
-          <div className="metric-label">Total Devices</div>
-          <div className="metric-value">{data.device_count}</div>
+          <div className="metric-label">24h Data Usage</div>
+          <div className="metric-value">{formatBytes(data.data_usage_24h)}</div>
         </div>
       </div>
 

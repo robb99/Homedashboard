@@ -45,6 +45,8 @@ class UnifiStatus(BaseStatus):
     client_count: int = 0
     devices_online: int = 0
     devices_offline: int = 0
+    wireless_clients: int = 0
+    data_usage_24h: int = 0
 
 
 # =============================================================================
