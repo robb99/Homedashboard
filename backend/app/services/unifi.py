@@ -111,6 +111,7 @@ class UnifiService:
                 dashboard_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/dashboard"
                 dashboard_response = await client.get(dashboard_url, cookies=self._cookies)
                 dashboard_data = dashboard_response.json().get("data", [])
+                logger.info(f"Unifi dashboard data: {dashboard_data}")
                 
                 # Find the 24-hour WAN traffic stat
                 data_usage_24h = 0
