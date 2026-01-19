@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: homelab-dashboard-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Unifi Controller
+      - UNIFI_HOST=${UNIFI_HOST:-}
+      - UNIFI_USERNAME=${UNIFI_USERNAME:-}
+      - UNIFI_PASSWORD=${UNIFI_PASSWORD:-}
+      - UNIFI_SITE=${UNIFI_SITE:-default}
+      - UNIFI_VERIFY_SSL=${UNIFI_VERIFY_SSL:-false}
+      # Proxmox
+      - PROXMOX_HOST=${PROXMOX_HOST:-}
+      - PROXMOX_USER=${PROXMOX_USER:-}
+      - PROXMOX_TOKEN_NAME=${PROXMOX_TOKEN_NAME:-}
+      - PROXMOX_TOKEN_VALUE=${PROXMOX_TOKEN_VALUE:-}
+      - PROXMOX_NODE=${PROXMOX_NODE:-pve}
+      - PROXMOX_VERIFY_SSL=${PROXMOX_VERIFY_SSL:-false}
+      # Plex
+      - PLEX_URL=${PLEX_URL:-}
+      - PLEX_TOKEN=${PLEX_TOKEN:-}
+      # Docker
+      - DOCKER_HOST=${DOCKER_HOST:-}
+      # Google Calendar
+      - GOOGLE_CREDENTIALS_PATH=/app/config/google_credentials.json
+      - GOOGLE_CALENDAR_IDS=${GOOGLE_CALENDAR_IDS:-primary}
+      # App Settings
+      - POLL_INTERVAL=${POLL_INTERVAL:-30}
+      - CACHE_TTL=${CACHE_TTL:-25}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:80}
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
+        - REACT_APP_REFRESH_INTERVAL=${REACT_APP_REFRESH_INTERVAL:-30000}
+    container_name: homelab-dashboard-ui
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - dashboard-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  dashboard-network:
+    driver: bridge
