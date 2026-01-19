@@ -51,7 +51,7 @@ class PlexService:
                     thumb_path = item.get("thumb") or item.get("grandparentThumb")
                     if thumb_path:
                         # Plex often returns relative URLs for thumbs, prepend the base URL
-                        thumb_url = f"{self.settings.plex_url}{thumb_path}"
+                        thumb_url = f"{self.settings.plex_url}{thumb_path}?X-Plex-Token={self.settings.plex_token}"
                     else:
                         thumb_url = None
 
