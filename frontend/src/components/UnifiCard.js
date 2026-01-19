@@ -10,7 +10,6 @@ export function UnifiCard({ data }) {
       title="Network"
       icon="🌐"
       status={data.status}
-      lastUpdated={data.last_updated}
       error={data.error_message}
     >
       <div className="metrics-grid">
@@ -34,7 +33,7 @@ export function UnifiCard({ data }) {
 
       {data.devices && data.devices.length > 0 && (
         <>
-          <div style={{ marginTop: '16px', marginBottom: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+          <div className="section-label">
             Devices
           </div>
           <div className="item-list">

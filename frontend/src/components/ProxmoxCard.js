@@ -31,7 +31,6 @@ export function ProxmoxCard({ data }) {
       title="Proxmox"
       icon="🖥️"
       status={data.status}
-      lastUpdated={data.last_updated}
       error={data.error_message}
     >
       {data.node && (
@@ -59,7 +58,7 @@ export function ProxmoxCard({ data }) {
 
       {allItems.length > 0 && (
         <>
-          <div style={{ marginTop: '16px', marginBottom: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+          <div className="section-label">
             Containers & VMs
           </div>
           <div className="item-list">

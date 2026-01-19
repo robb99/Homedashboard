@@ -30,6 +30,16 @@ class Settings(BaseSettings):
     google_credentials_path: str = ""
     google_calendar_ids: str = "primary"
 
+    # Weather (Open-Meteo - no API key required)
+    weather_latitude: float = 0.0
+    weather_longitude: float = 0.0
+    weather_enabled: bool = True
+
+    # News (NewsAPI.org)
+    news_api_key: str = ""
+    news_country: str = "us"
+    news_enabled: bool = True
+
     # Application Settings
     poll_interval: int = 30
     cache_ttl: int = 25

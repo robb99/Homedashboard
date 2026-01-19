@@ -59,10 +59,9 @@ export function PlexCard({ data }) {
       title="Plex"
       icon="🎬"
       status={data.status}
-      lastUpdated={data.last_updated}
       error={data.error_message}
     >
-      <div className="metrics-grid" style={{ marginBottom: '16px' }}>
+      <div className="metrics-grid spaced">
         <div className="metric">
           <div className="metric-label">Libraries</div>
           <div className="metric-value">{data.library_count}</div>
@@ -75,7 +74,7 @@ export function PlexCard({ data }) {
 
       {data.recent_items && data.recent_items.length > 0 && (
         <div className="item-list">
-          {data.recent_items.slice(0, 5).map((item, index) => (
+          {data.recent_items.slice(0, 10).map((item, index) => (
             <PlexItem key={index} item={item} />
           ))}
         </div>

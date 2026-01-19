@@ -9,7 +9,6 @@ export function DockerCard({ data }) {
       title="Docker"
       icon="🐳"
       status={data.status}
-      lastUpdated={data.last_updated}
       error={data.error_message}
     >
       <div className="metrics-grid">

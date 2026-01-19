@@ -8,6 +8,8 @@ from app.models.schemas import (
     PlexStatus,
     DockerStatus,
     CalendarStatus,
+    WeatherStatus,
+    NewsStatus,
 )
 from app.services import (
     unifi_service,
@@ -15,6 +17,8 @@ from app.services import (
     plex_service,
     docker_service,
     calendar_service,
+    weather_service,
+    news_service,
 )
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
@@ -67,6 +71,18 @@ async def get_docker():
 async def get_calendar():
     """Get upcoming calendar events."""
     return await calendar_service.get_status()
+
+
+@router.get("/weather", response_model=WeatherStatus)
+async def get_weather():
+    """Get weather forecast from Open-Meteo."""
+    return await weather_service.get_status()
+
+
+@router.get("/news", response_model=NewsStatus)
+async def get_news():
+    """Get top headlines from NewsAPI."""
+    return await news_service.get_status()
 
 
 @router.post("/refresh")

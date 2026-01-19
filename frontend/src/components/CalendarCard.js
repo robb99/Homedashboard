@@ -1,5 +1,4 @@
 import React from 'react';
-import { StatusCard } from './StatusCard';
 
 function formatEventTime(event) {
   if (event.all_day) {
@@ -16,51 +15,32 @@ function formatEventTime(event) {
   return `${startTime} - ${endTime}`;
 }
 
-function EventItem({ event }) {
+function EventCard({ event }) {
   const startDate = new Date(event.start);
   const day = startDate.getDate();
   const month = startDate.toLocaleDateString(undefined, { month: 'short' });
-  const weekday = startDate.toLocaleDateString(undefined, { weekday: 'short' });
 
   return (
-    <div className="event-item">
-      <div className="event-date">
-        <div className="event-day">{day}</div>
-        <div className="event-month">{month}</div>
+    <div className="event-card">
+      <div className="event-card-date">
+        <div className="event-card-day">{day}</div>
+        <div className="event-card-month">{month}</div>
       </div>
-      <div className="event-details">
-        <div className="event-title">{event.summary}</div>
-        <div className="event-time">
-          {weekday} {formatEventTime(event)}
-        </div>
-        {event.location && (
-          <div className="event-location">📍 {event.location}</div>
-        )}
-      </div>
+      <div className="event-card-title">{event.summary}</div>
+      <div className="event-card-time">{formatEventTime(event)}</div>
+      {event.location && (
+        <div className="event-card-location">📍 {event.location}</div>
+      )}
     </div>
   );
-}
-
-function groupEventsByDay(events) {
-  const groups = {};
-
-  events.forEach(event => {
-    const date = new Date(event.start).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(event);
-  });
-
-  return groups;
 }
 
 export function CalendarCard({ data }) {
   if (!data) return null;
 
-  const eventsByDay = groupEventsByDay(data.events || []);
-  const sortedDays = Object.keys(eventsByDay).sort(
-    (a, b) => new Date(a) - new Date(b)
+  // Sort events by start date (soonest first)
+  const sortedEvents = [...(data.events || [])].sort(
+    (a, b) => new Date(a.start) - new Date(b.start)
   );
 
   return (
@@ -78,14 +58,10 @@ export function CalendarCard({ data }) {
       <div className="card-body">
         {data.error_message ? (
           <div className="error-message">{data.error_message}</div>
-        ) : data.events && data.events.length > 0 ? (
-          <div className="event-list">
-            {sortedDays.map(day => (
-              <React.Fragment key={day}>
-                {eventsByDay[day].map((event, index) => (
-                  <EventItem key={`${day}-${index}`} event={event} />
-                ))}
-              </React.Fragment>
+        ) : sortedEvents.length > 0 ? (
+          <div className="event-cards-row">
+            {sortedEvents.map((event, index) => (
+              <EventCard key={index} event={event} />
             ))}
           </div>
         ) : (

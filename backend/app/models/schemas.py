@@ -139,6 +139,34 @@ class CalendarStatus(BaseStatus):
 
 
 # =============================================================================
+# WEATHER MODELS
+# =============================================================================
+class WeatherForecast(BaseModel):
+    temperature: float
+    description: str
+    icon: str
+
+
+class WeatherStatus(BaseStatus):
+    today: Optional[WeatherForecast] = None
+    tomorrow: Optional[WeatherForecast] = None
+    location: Optional[str] = None
+
+
+# =============================================================================
+# NEWS MODELS
+# =============================================================================
+class NewsHeadline(BaseModel):
+    title: str
+    source: Optional[str] = None
+    url: Optional[str] = None
+
+
+class NewsStatus(BaseStatus):
+    headlines: List[NewsHeadline] = []
+
+
+# =============================================================================
 # DASHBOARD AGGREGATE
 # =============================================================================
 class DashboardStatus(BaseModel):

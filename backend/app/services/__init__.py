@@ -4,3 +4,5 @@ from app.services.proxmox import proxmox_service
 from app.services.plex import plex_service
 from app.services.docker_service import docker_service
 from app.services.calendar import calendar_service
+from app.services.weather import weather_service
+from app.services.news import news_service

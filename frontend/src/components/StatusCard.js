@@ -1,7 +1,7 @@
 import React from 'react';
-import { getStatusClass, formatRelativeTime } from '../hooks/useDashboard';
+import { getStatusClass } from '../hooks/useDashboard';
 
-export function StatusCard({ title, icon, status, lastUpdated, error, children }) {
+export function StatusCard({ title, icon, status, error, children }) {
   const statusClass = getStatusClass(status);
   const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
 
@@ -24,11 +24,6 @@ export function StatusCard({ title, icon, status, lastUpdated, error, children }
           children
         )}
       </div>
-      {lastUpdated && (
-        <div className="card-footer">
-          Updated {formatRelativeTime(lastUpdated)}
-        </div>
-      )}
     </div>
   );
 }

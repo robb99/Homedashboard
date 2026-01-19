@@ -34,6 +34,14 @@ services:
       # Google Calendar
       - GOOGLE_CREDENTIALS_PATH=/app/config/google_credentials.json
       - GOOGLE_CALENDAR_IDS=${GOOGLE_CALENDAR_IDS:-primary}
+      # Weather (Open-Meteo)
+      - WEATHER_LATITUDE=${WEATHER_LATITUDE:-0}
+      - WEATHER_LONGITUDE=${WEATHER_LONGITUDE:-0}
+      - WEATHER_ENABLED=${WEATHER_ENABLED:-true}
+      # News (NewsAPI)
+      - NEWS_API_KEY=${NEWS_API_KEY:-}
+      - NEWS_COUNTRY=${NEWS_COUNTRY:-us}
+      - NEWS_ENABLED=${NEWS_ENABLED:-true}
       # App Settings
       - POLL_INTERVAL=${POLL_INTERVAL:-30}
       - CACHE_TTL=${CACHE_TTL:-25}
