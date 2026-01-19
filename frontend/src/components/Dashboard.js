@@ -20,7 +20,7 @@ export function Dashboard() {
         <h1 className="dashboard-title">HomeLab Dashboard</h1>
         <div className="dashboard-meta">
           <div className={`refresh-indicator ${loading ? 'loading' : ''}`}>
-            {loading ? '⟳ Refreshing...' : `Last refresh: ${formatTime(lastFetch)}`}
+            {loading ? '◌ Refreshing...' : `◉ Last refresh: ${formatTime(lastFetch)}`}
           </div>
         </div>
       </header>
@@ -32,11 +32,21 @@ export function Dashboard() {
       )}
 
       <div className="dashboard-grid">
-        <UnifiCard data={data?.unifi} />
-        <ProxmoxCard data={data?.proxmox} />
-        <DockerCard data={data?.docker} />
-        <PlexCard data={data?.plex} />
-        <CalendarCard data={data?.calendar} />
+        {data?.unifi?.status !== 'unknown' && (
+          <UnifiCard data={data?.unifi} />
+        )}
+        {data?.proxmox?.status !== 'unknown' && (
+          <ProxmoxCard data={data?.proxmox} />
+        )}
+        {data?.docker?.status !== 'unknown' && (
+          <DockerCard data={data?.docker} />
+        )}
+        {data?.plex?.status !== 'unknown' && (
+          <PlexCard data={data?.plex} />
+        )}
+        {data?.calendar?.status !== 'unknown' && (
+          <CalendarCard data={data?.calendar} />
+        )}
       </div>
     </div>
   );
