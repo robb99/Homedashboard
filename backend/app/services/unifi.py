@@ -111,14 +111,11 @@ class UnifiService:
                 dashboard_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/dashboard"
                 dashboard_response = await client.get(dashboard_url, cookies=self._cookies)
                 dashboard_data = dashboard_response.json().get("data", [])
-                logger.info(f"Unifi dashboard data: {dashboard_data}")
-                
                 # Find the 24-hour WAN traffic stat
                 data_usage_24h = 0
                 for stat in dashboard_data:
-                    if stat.get("name") == "wan-tx_bytes-r" and stat.get("cat") == "traffic":
-                        data_usage_24h = stat.get("bytes", 0)
-                        break
+                    data_usage_24h += stat.get("wan-tx_bytes", 0)
+                    data_usage_24h += stat.get("wan-rx_bytes", 0)
 
                 # Determine overall status
                 if devices_offline > 0:
