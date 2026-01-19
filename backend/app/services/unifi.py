@@ -113,9 +113,14 @@ class UnifiService:
                 dashboard_data = dashboard_response.json().get("data", [])
                 # Find the 24-hour WAN traffic stat
                 data_usage_24h = 0
+                wan_latency = 0.0
                 for stat in dashboard_data:
                     data_usage_24h += stat.get("wan-tx_bytes", 0)
                     data_usage_24h += stat.get("wan-rx_bytes", 0)
+                
+                # Get the latest average latency
+                if dashboard_data:
+                    wan_latency = dashboard_data[0].get("latency_avg", 0.0)
 
                 # Determine overall status
                 if devices_offline > 0:
@@ -135,6 +140,7 @@ class UnifiService:
                     devices_offline=devices_offline,
                     wireless_clients=wireless_clients,
                     data_usage_24h=data_usage_24h,
+                    wan_latency=wan_latency,
                     last_updated=datetime.now(),
                 )
 

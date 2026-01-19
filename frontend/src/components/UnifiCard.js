@@ -19,8 +19,8 @@ export function UnifiCard({ data }) {
           <div className="metric-value">{data.wireless_clients}</div>
         </div>
         <div className="metric">
-          <div className="metric-label">Devices Offline</div>
-          <div className="metric-value">{data.devices_offline}</div>
+          <div className="metric-label">WAN Latency</div>
+          <div className="metric-value">{data.wan_latency?.toFixed(1)} ms</div>
         </div>
         <div className="metric">
           <div className="metric-label">Total Clients</div>

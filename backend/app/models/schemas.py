@@ -47,6 +47,7 @@ class UnifiStatus(BaseStatus):
     devices_offline: int = 0
     wireless_clients: int = 0
     data_usage_24h: int = 0
+    wan_latency: float = 0.0
 
 
 # =============================================================================
