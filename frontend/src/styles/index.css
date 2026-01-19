@@ -232,10 +232,12 @@ body {
 /* List Styles */
 .item-list {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row; /* Change to row to align horizontally */
+  flex-wrap: wrap; /* Allow items to wrap to the next line */
+  gap: 12px; /* Adjust gap between items */
   max-height: 300px;
   overflow-y: auto;
+  justify-content: flex-start; /* Align items to the start */
 }
 
 .item-list::-webkit-scrollbar {
@@ -362,6 +364,9 @@ body {
   padding: 10px;
   background: var(--bg-secondary);
   border-radius: 8px;
+  flex: 0 0 calc(20% - 10px); /* Adjust width to fit 5 items with gap */
+  box-sizing: border-box; /* Include padding and border in the width */
+  min-width: 100px; /* Ensure items don't get too small on smaller screens */
 }
 
 .plex-thumb {
