@@ -363,9 +363,6 @@ body {
   padding: 10px;
   background: var(--bg-secondary);
   border-radius: 8px;
-  flex: 0 0 calc(20% - 10px); /* Adjust width to fit 5 items with gap */
-  box-sizing: border-box; /* Include padding and border in the width */
-  min-width: 100px; /* Ensure items don't get too small on smaller screens */
 }
 
 .plex-thumb {
