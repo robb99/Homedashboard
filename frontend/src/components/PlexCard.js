@@ -36,7 +36,11 @@ function PlexItem({ item }) {
   return (
     <div className="plex-item">
       <div className="plex-thumb">
-        {getTypeIcon()}
+        {item.thumb ? (
+          <img src={item.thumb} alt={item.title} className="plex-poster" />
+        ) : (
+          getTypeIcon()
+        )}
       </div>
       <div className="plex-info">
         <div className="plex-title">{getDisplayTitle()}</div>
