@@ -137,11 +137,11 @@ class CalendarService:
                             end_str = end.get("dateTime", "")
                             # Handle timezone offset
                             start_dt = datetime.fromisoformat(
-                                start_str.replace("Z", "+00:00").astimezone(timezone.utc)
-                            )
+                                start_str.replace("Z", "+00:00")
+                            ).astimezone(timezone.utc)
                             end_dt = datetime.fromisoformat(
-                                end_str.replace("Z", "+00:00").astimezone(timezone.utc)
-                            )
+                                end_str.replace("Z", "+00:00")
+                            ).astimezone(timezone.utc)
                             all_day = False
 
                         calendar_event = CalendarEvent(
