@@ -20,7 +20,7 @@ class UnifiService:
     async def _login(self, client: httpx.AsyncClient) -> bool:
         """Authenticate with Unifi Controller."""
         try:
-            login_url = f"{self.settings.unifi_host}/api/login"
+            login_url = f"{self.settings.unifi_host}/api/auth/login"
             response = await client.post(
                 login_url,
                 json={
@@ -64,7 +64,7 @@ class UnifiService:
                     )
 
                 # Get devices
-                devices_url = f"{self.settings.unifi_host}/api/s/{self.settings.unifi_site}/stat/device"
+                devices_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/device"
                 devices_response = await client.get(devices_url, cookies=self._cookies)
                 devices_data = devices_response.json().get("data", [])
 
@@ -89,7 +89,7 @@ class UnifiService:
                         devices_offline += 1
 
                 # Get clients
-                clients_url = f"{self.settings.unifi_host}/api/s/{self.settings.unifi_site}/stat/sta"
+                clients_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/sta"
                 clients_response = await client.get(clients_url, cookies=self._cookies)
                 clients_data = clients_response.json().get("data", [])
 
