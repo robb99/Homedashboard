@@ -1,0 +1,207 @@
+diff --git a/backend/app/services/plex.py b/backend/app/services/plex.py
+index 28ad24d..e205fbb 100644
+--- a/backend/app/services/plex.py
++++ b/backend/app/services/plex.py
+@@ -48,11 +48,18 @@ class PlexService:
+                 for item in metadata[:10]:  # Limit to 10 items
+                     added_at = datetime.fromtimestamp(item.get("addedAt", 0))
+
++                    thumb_path = item.get("thumb") or item.get("grandparentThumb")
++                    if thumb_path:
++                        # Plex often returns relative URLs for thumbs, prepend the base URL
++                        thumb_url = f"{self.settings.plex_url}{thumb_path}"
++                    else:
++                        thumb_url = None
++
+                     plex_item = PlexItem(
+                         title=item.get("title", "Unknown"),
+                         type=item.get("type", "unknown"),
+                         added_at=added_at,
+-                        thumb=item.get("thumb"),
++                        thumb=thumb_url,
+                         year=item.get("year"),
+                         grandparent_title=item.get("grandparentTitle"),
+                         parent_title=item.get("parentTitle"),
+diff --git a/example.env b/example.env
+deleted file mode 100644
+index eb1056d..0000000
+--- a/example.env
++++ /dev/null
+@@ -1,59 +0,0 @@
+-# HomeLab Dashboard Configuration
+-
+-# =============================================================================
+-# UNIFI CONTROLLER
+-# =============================================================================
+-UNIFI_HOST=https://192.168.1.1:8443
+-UNIFI_USERNAME=admin
+-UNIFI_PASSWORD=your_password
+-UNIFI_SITE=default
+-# Set to true if using self-signed certificate
+-UNIFI_VERIFY_SSL=false
+-
+-# =============================================================================
+-# PROXMOX
+-# =============================================================================
+-PROXMOX_HOST=https://192.168.1.10:8006
+-PROXMOX_USER=root@pam
+-PROXMOX_TOKEN_NAME=dashboard
+-PROXMOX_TOKEN_VALUE=your-api-token-here
+-PROXMOX_NODE=pve
+-# Set to true if using self-signed certificate
+-PROXMOX_VERIFY_SSL=false
+-
+-# =============================================================================
+-# PLEX
+-# =============================================================================
+-PLEX_URL=http://192.168.1.20:32400
+-PLEX_TOKEN=your_plex_token
+-
+-# =============================================================================
+-# DOCKER (Optional - for monitoring remote Docker host)
+-# =============================================================================
+-# Leave empty to monitor local Docker socket
+-DOCKER_HOST=
+-# For remote: tcp://192.168.1.30:2375
+-
+-# =============================================================================
+-# GOOGLE CALENDAR
+-# =============================================================================
+-# Path to your Google Calendar credentials JSON file
+-GOOGLE_CREDENTIALS_PATH=/app/config/google_credentials.json
+-# Comma-separated list of calendar IDs to display
+-GOOGLE_CALENDAR_IDS=primary
+-
+-# =============================================================================
+-# APPLICATION SETTINGS
+-# =============================================================================
+-# Polling interval in seconds
+-POLL_INTERVAL=30
+-# Cache TTL in seconds
+-CACHE_TTL=25
+-# CORS origins (comma-separated)
+-CORS_ORIGINS=http://localhost:3000,http://192.168.1.100:3000
+-
+-# =============================================================================
+-# FRONTEND SETTINGS (used at build time)
+-# =============================================================================
+-REACT_APP_API_URL=http://localhost:8000
+-REACT_APP_REFRESH_INTERVAL=30000
+diff --git a/frontend/src/components/PlexCard.js b/frontend/src/components/PlexCard.js
+index c065c65..d1697a1 100644
+--- a/frontend/src/components/PlexCard.js
++++ b/frontend/src/components/PlexCard.js
+@@ -4,14 +4,14 @@ import { formatRelativeTime } from '../hooks/useDashboard';
+
+ function PlexItem({ item }) {
+   const getDisplayTitle = () => {
+-    if (item.type === 'episode' && item.grandparent_title) {
++    if ((item.type === 'episode' || item.type === 'season') && item.grandparent_title) {
+       return item.grandparent_title;
+     }
+     return item.title;
+   };
+
+   const getSubtitle = () => {
+-    if (item.type === 'episode') {
++    if (item.type === 'episode' || item.type === 'season') {
+       return item.title;
+     }
+     if (item.year) {
+@@ -36,7 +36,11 @@ function PlexItem({ item }) {
+   return (
+     <div className="plex-item">
+       <div className="plex-thumb">
+-        {getTypeIcon()}
++        {item.thumb ? (
++          <img src={item.thumb} alt={item.title} className="plex-poster" />
++        ) : (
++          getTypeIcon()
++        )}
+       </div>
+       <div className="plex-info">
+         <div className="plex-title">{getDisplayTitle()}</div>
+diff --git a/frontend/src/styles/index.css b/frontend/src/styles/index.css
+index ae3f7d0..19b074f 100644
+--- a/frontend/src/styles/index.css
++++ b/frontend/src/styles/index.css
+@@ -374,6 +374,14 @@ body {
+   justify-content: center;
+   font-size: 24px;
+   color: var(--text-muted);
++  overflow: hidden; /* Ensure image doesn't spill out */
++}
++
++.plex-thumb img.plex-poster {
++  width: 100%;
++  height: 100%;
++  object-fit: cover;
++  display: block; /* Remove extra space below image */
+ }
+
+ .plex-info {
+diff --git a/robb.env b/robb.env
+deleted file mode 100644
+index 1d6f90b..0000000
+--- a/robb.env
++++ /dev/null
+@@ -1,59 +0,0 @@
+-# HomeLab Dashboard Configuration
+-
+-# =============================================================================
+-# UNIFI CONTROLLER
+-# =============================================================================
+-UNIFI_HOST=https://192.168.1.1:8443
+-UNIFI_USERNAME=dashboard
+-UNIFI_PASSWORD=MatherlyDashboard99
+-UNIFI_SITE=default
+-# Set to true if using self-signed certificate
+-UNIFI_VERIFY_SSL=false
+-
+-# =============================================================================
+-# PROXMOX
+-# =============================================================================
+-PROXMOX_HOST=https://192.168.1.251:8006
+-PROXMOX_USER=dashboard@pam
+-PROXMOX_TOKEN_NAME=dashboard
+-PROXMOX_TOKEN_VALUE=9aef1dbe-a646-4d21-b9ce-15af8b7e0545
+-PROXMOX_NODE=pve
+-# Set to true if using self-signed certificate
+-PROXMOX_VERIFY_SSL=false
+-
+-# =============================================================================
+-# PLEX
+-# =============================================================================
+-PLEX_URL=http://192.168.1.197:32400
+-PLEX_TOKEN=2ZZ5zxN8bD6GGAcGHu51
+-
+-# =============================================================================
+-# DOCKER (Optional - for monitoring remote Docker host)
+-# =============================================================================
+-# Leave empty to monitor local Docker socket
+-DOCKER_HOST=
+-# For remote: tcp://192.168.1.30:2375
+-
+-# =============================================================================
+-# GOOGLE CALENDAR
+-# =============================================================================
+-# Path to your Google Calendar credentials JSON file
+-GOOGLE_CREDENTIALS_PATH=/app/config/google_credentials.json
+-# Comma-separated list of calendar IDs to display
+-GOOGLE_CALENDAR_IDS=primary
+-
+-# =============================================================================
+-# APPLICATION SETTINGS
+-# =============================================================================
+-# Polling interval in seconds
+-POLL_INTERVAL=30
+-# Cache TTL in seconds
+-CACHE_TTL=25
+-# CORS origins (comma-separated)
+-CORS_ORIGINS=http://localhost:3000,http://192.168.1.100:3000
+-
+-# =============================================================================
+-# FRONTEND SETTINGS (used at build time)
+-# =============================================================================
+-REACT_APP_API_URL=http://localhost:8000
+-REACT_APP_REFRESH_INTERVAL=30000
