@@ -12,7 +12,7 @@ export function useDashboard() {
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/dashboard`);
+      const response = await fetch(`${API_URL}/dashboard`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
