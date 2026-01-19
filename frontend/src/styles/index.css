@@ -232,12 +232,11 @@ body {
 /* List Styles */
 .item-list {
   display: flex;
-  flex-direction: row; /* Change to row to align horizontally */
-  flex-wrap: wrap; /* Allow items to wrap to the next line */
-  gap: 12px; /* Adjust gap between items */
-  max-height: 300px;
+  flex-direction: column; /* Keep vertical stacking */
+  gap: 8px;
+  max-height: 460px; /* Increased height to show 5 items */
   overflow-y: auto;
-  justify-content: flex-start; /* Align items to the start */
+  justify-content: flex-start; /* Ensure items align to the start */
 }
 
 .item-list::-webkit-scrollbar {
