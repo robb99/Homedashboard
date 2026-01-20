@@ -5,6 +5,7 @@ import { ProxmoxCard } from './ProxmoxCard';
 import { PlexCard } from './PlexCard';
 import { DockerCard } from './DockerCard';
 import { CalendarCard } from './CalendarCard';
+import { DailyByteCard } from './DailyByteCard';
 import { WeatherWidget } from './WeatherWidget';
 import { NewsWidget } from './NewsWidget';
 import { DateTimeWidget } from './DateTimeWidget';
@@ -45,6 +46,7 @@ export function Dashboard() {
         {data?.plex?.status !== 'unknown' && (
           <PlexCard data={data?.plex} />
         )}
+        <DailyByteCard />
         {data?.calendar?.status !== 'unknown' && (
           <CalendarCard data={data?.calendar} />
         )}

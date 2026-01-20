@@ -610,6 +610,63 @@ body {
   margin-top: 2px;
 }
 
+/* Daily Byte Card */
+.daily-byte-card .card-body {
+  gap: 12px;
+}
+
+.daily-section {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.daily-section-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.daily-section-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-quote-text {
+  font-style: italic;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.daily-quote-author {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.daily-trivia-text,
+.daily-joke-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.daily-joke-punchline {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.daily-loading {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
 /* Error State */
 .error-message {
   background: rgba(239, 68, 68, 0.1);
@@ -703,10 +760,10 @@ body {
   }
 }
 
-/* Medium screens - 2 or 3 column grid */
+/* Medium screens - 4 column grid */
 @media (min-width: 1200px) and (max-width: 1599px) {
   .dashboard-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
