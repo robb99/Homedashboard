@@ -96,9 +96,35 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 - **Goal:** Show more Plex items in the card.
 - **Change:** Increased from 5 to 10 items displayed in `PlexCard.js`. **(IMPLEMENTED)**
 
+### 11. New Feature: "A Daily Byte" Card
+- **Goal:** Add a new card displaying daily inspirational/fun content - Quote of the Day, Trivia, and Joke.
+- **Changes:**
+    - **DailyByteCard Component:** New frontend-only card that fetches data from free public APIs.
+    - **APIs Used:**
+        - Quote: ZenQuotes API (`https://zenquotes.io/api/today`) - free, no auth required
+        - Joke: JokeAPI (`https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?safe-mode`) - free, safe mode
+        - Trivia: Numbers API (`http://numbersapi.com/random/trivia`) - free, random number facts
+    - **24-Hour LocalStorage Caching:** Data is cached in browser localStorage for 24 hours to minimize API calls.
+    - **Fallback Data:** If APIs fail, displays preset fallback content.
+    - **Grid Layout Update:** Medium breakpoint (1200-1599px) changed from 3 to 4 columns.
+- **Files Created:**
+    - `frontend/src/components/DailyByteCard.js` - New component with API fetching and caching logic
+- **Files Modified:**
+    - `frontend/src/components/Dashboard.js` - Import and render DailyByteCard after PlexCard
+    - `frontend/src/styles/index.css` - Added styles for daily byte sections and updated grid layout **(IMPLEMENTED)**
+
+### 12. Bugfix: Unifi Data Usage and Daily Byte Icon
+- **Goal:** Fix a validation error in the Unifi service and improve the Daily Byte card's icon.
+- **Changes:**
+    - **Unifi Pydantic Validation Error:** The `data_usage_24h` field in the `UnifiStatus` model was changed from `int` to `float` to handle decimal values from the Unifi API.
+    - **Daily Byte Card Icon:** The icon for the `DailyByteCard` was changed from ✨ to 🧠 to better reflect the card's content.
+- **Files Modified:**
+    - `backend/app/models/schemas.py` - Updated `data_usage_24h` field.
+    - `frontend/src/components/DailyByteCard.js` - Changed card icon. **(IMPLEMENTED)**
+
 ---
 
-## Current Status (As of Jan 19, 2026)
+## Current Status (As of Jan 20, 2026)
 
 ### Working Features
 - **Network (Unifi):** Displaying wireless clients, WAN latency, total clients, 24h data usage, and device list.
@@ -108,6 +134,7 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 - **Weather:** Displaying today's and tomorrow's temperature in header (requires coordinates in `.env`).
 - **News:** Displaying rotating headlines in header (requires NewsAPI key in `.env`).
 - **DateTime:** Displaying current date/time in header.
+- **A Daily Byte:** Displaying daily quote, trivia, and joke with 24-hour caching (no configuration required).
 - **Layout:** All cards fit on 1080p screen without vertical scrolling.
 
 ### Remaining Issues
