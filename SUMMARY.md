@@ -142,6 +142,40 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/components/DailyByteCard.js` - Complete rewrite with new APIs, rotation logic, 5-item layout
     - `frontend/src/styles/index.css` - Added styles for history and word sections, adjusted spacing **(IMPLEMENTED)**
 
+### 14. Enhancement: Plex Card with Library Counts and Active Streams
+- **Branch:** `feature/daily-byte-enhancement`
+- **Goal:** Enhance the Plex card to show total movie/show counts and active streaming sessions.
+- **Changes:**
+    - **Metrics Update:** Replaced "Libraries" and "Recent Items" with "Movies" and "TV Shows" total counts.
+    - **Now Playing Section:** Shows active streams with user name, content title, and play/pause state.
+    - **Efficient API Calls:** Uses Plex pagination parameters to get counts without fetching all metadata.
+- **Backend:**
+    - Added `PlexSession` model with user, title, show_title, type, progress, state fields.
+    - Updated `PlexStatus` with `movie_count`, `show_count`, `active_sessions` fields.
+    - Fetches library counts from `/library/sections/{key}/all` with pagination params.
+    - Fetches active sessions from `/status/sessions` endpoint.
+- **Frontend:**
+    - Updated metrics grid to show Movies and TV Shows counts.
+    - Added "Now Playing" section with streaming session details.
+    - Shows play/pause icons based on session state.
+- **Files Modified:**
+    - `backend/app/models/schemas.py` - Added PlexSession model, updated PlexStatus
+    - `backend/app/services/plex.py` - Added movie/show count and active sessions fetching
+    - `frontend/src/components/PlexCard.js` - Updated metrics and added Now Playing section
+    - `frontend/src/styles/index.css` - Added styles for plex-now-playing and plex-session **(IMPLEMENTED)**
+
+---
+
+## Future Priority Improvements
+
+| # | Feature | Description | Status |
+|---|---------|-------------|--------|
+| 1 | Web-based Setup Wizard | Configure via UI instead of .env | Planned |
+| 2 | Service Toggles | Enable/disable services from settings panel | Planned |
+| 3 | Theme Support | Light/dark mode, custom accent colors | Planned |
+| 4 | Mobile Responsive | Better phone/tablet layout | Planned |
+| 5 | Docker Hub Images | Pre-built images for easy deployment | Planned |
+
 ---
 
 ## Current Status (As of Jan 20, 2026)
@@ -149,7 +183,7 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 ### Working Features
 - **Network (Unifi):** Displaying wireless clients, WAN latency, total clients, 24h data usage, and device list.
 - **Proxmox:** Displaying node info, CPU/memory usage, and container/VM list.
-- **Plex:** Displaying 10 recently added items with posters and metadata.
+- **Plex:** Displaying total movie/show counts, active streams with user info, and 10 recently added items with posters.
 - **Calendar:** Displaying upcoming events in horizontal card layout.
 - **Weather:** Displaying today's and tomorrow's temperature in header (requires coordinates in `.env`).
 - **News:** Displaying rotating headlines in header (requires NewsAPI key in `.env`).

@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 
 from app.config import get_settings
-from app.models.schemas import PlexStatus, PlexItem, StatusLevel
+from app.models.schemas import PlexStatus, PlexItem, PlexSession, StatusLevel
 from app.services.cache import cache_service
 
 logger = logging.getLogger(__name__)
@@ -66,18 +66,74 @@ class PlexService:
                     )
                     recent_items.append(plex_item)
 
-                # Get library sections count
+                # Get library sections
                 sections_url = f"{self.settings.plex_url}/library/sections"
                 sections_response = await client.get(sections_url, headers=headers)
                 sections_data = sections_response.json()
-                library_count = len(
-                    sections_data.get("MediaContainer", {}).get("Directory", [])
-                )
+                directories = sections_data.get("MediaContainer", {}).get("Directory", [])
+                library_count = len(directories)
+
+                # Find movie and show library keys and get counts
+                movie_count = 0
+                show_count = 0
+                for directory in directories:
+                    section_type = directory.get("type", "")
+                    section_key = directory.get("key", "")
+                    if section_type == "movie":
+                        # Get movie count - use X-Plex-Container-Size=0 to only get count
+                        section_url = f"{self.settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
+                        section_response = await client.get(section_url, headers=headers)
+                        section_data = section_response.json()
+                        container = section_data.get("MediaContainer", {})
+                        movie_count += container.get("totalSize", container.get("size", 0))
+                    elif section_type == "show":
+                        # Get show count - use X-Plex-Container-Size=0 to only get count
+                        section_url = f"{self.settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
+                        section_response = await client.get(section_url, headers=headers)
+                        section_data = section_response.json()
+                        container = section_data.get("MediaContainer", {})
+                        show_count += container.get("totalSize", container.get("size", 0))
+
+                # Get active sessions
+                sessions_url = f"{self.settings.plex_url}/status/sessions"
+                sessions_response = await client.get(sessions_url, headers=headers)
+                sessions_data = sessions_response.json()
+                session_metadata = sessions_data.get("MediaContainer", {}).get("Metadata", [])
+
+                active_sessions = []
+                for session in session_metadata:
+                    user_info = session.get("User", {})
+                    user_name = user_info.get("title", "Unknown")
+
+                    session_type = session.get("type", "unknown")
+                    title = session.get("title", "Unknown")
+                    show_title = session.get("grandparentTitle") if session_type == "episode" else None
+
+                    # Calculate progress percentage
+                    view_offset = session.get("viewOffset", 0)
+                    duration = session.get("duration", 1)
+                    progress = (view_offset / duration * 100) if duration > 0 else 0
+
+                    # Get playback state
+                    player_info = session.get("Player", {})
+                    state = player_info.get("state", "playing")
+
+                    active_sessions.append(PlexSession(
+                        user=user_name,
+                        title=title,
+                        show_title=show_title,
+                        type=session_type,
+                        progress=round(progress, 1),
+                        state=state
+                    ))
 
                 result = PlexStatus(
                     status=StatusLevel.HEALTHY,
                     recent_items=recent_items,
                     library_count=library_count,
+                    movie_count=movie_count,
+                    show_count=show_count,
+                    active_sessions=active_sessions,
                     last_updated=datetime.now(),
                 )
 

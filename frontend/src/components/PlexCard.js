@@ -51,6 +51,27 @@ function PlexItem({ item }) {
   );
 }
 
+function PlexSessionItem({ session }) {
+  const getDisplayTitle = () => {
+    if (session.show_title) {
+      return `${session.show_title}: ${session.title}`;
+    }
+    return session.title;
+  };
+
+  const getStateIcon = () => {
+    return session.state === 'paused' ? '⏸️' : '▶️';
+  };
+
+  return (
+    <div className="plex-session">
+      <span className="session-state">{getStateIcon()}</span>
+      <span className="session-user">{session.user}</span>
+      <span className="session-title">{getDisplayTitle()}</span>
+    </div>
+  );
+}
+
 export function PlexCard({ data }) {
   if (!data) return null;
 
@@ -63,14 +84,23 @@ export function PlexCard({ data }) {
     >
       <div className="metrics-grid spaced">
         <div className="metric">
-          <div className="metric-label">Libraries</div>
-          <div className="metric-value">{data.library_count}</div>
+          <div className="metric-label">Movies</div>
+          <div className="metric-value">{data.movie_count || 0}</div>
         </div>
         <div className="metric">
-          <div className="metric-label">Recent Items</div>
-          <div className="metric-value">{data.recent_items?.length || 0}</div>
+          <div className="metric-label">TV Shows</div>
+          <div className="metric-value">{data.show_count || 0}</div>
         </div>
       </div>
+
+      {data.active_sessions && data.active_sessions.length > 0 && (
+        <div className="plex-now-playing">
+          <div className="section-label">Now Playing ({data.active_sessions.length})</div>
+          {data.active_sessions.map((session, index) => (
+            <PlexSessionItem key={index} session={session} />
+          ))}
+        </div>
+      )}
 
       {data.recent_items && data.recent_items.length > 0 && (
         <div className="item-list">

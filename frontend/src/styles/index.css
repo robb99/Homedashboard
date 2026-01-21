@@ -610,6 +610,47 @@ body {
   margin-top: 2px;
 }
 
+/* Plex Now Playing */
+.plex-now-playing {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.plex-now-playing .section-label {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.plex-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.plex-session .session-state {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.plex-session .session-user {
+  color: var(--accent);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.plex-session .session-title {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Daily Byte Card */
 .daily-byte-card .card-body {
   gap: 8px;

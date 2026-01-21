@@ -95,9 +95,21 @@ class PlexItem(BaseModel):
     parent_title: Optional[str] = None  # For episodes (season name)
 
 
+class PlexSession(BaseModel):
+    user: str
+    title: str  # Movie title or episode title
+    show_title: Optional[str] = None  # For TV: show name
+    type: str  # movie, episode
+    progress: float = 0.0  # 0-100 percentage
+    state: str = "playing"  # playing, paused
+
+
 class PlexStatus(BaseStatus):
     recent_items: List[PlexItem] = []
     library_count: int = 0
+    movie_count: int = 0
+    show_count: int = 0
+    active_sessions: List[PlexSession] = []
 
 
 # =============================================================================
