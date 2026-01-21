@@ -612,13 +612,28 @@ body {
 
 /* Daily Byte Card */
 .daily-byte-card .card-body {
-  gap: 12px;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.daily-byte-card .card-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.daily-byte-card .card-body::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.daily-byte-card .card-body::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
 }
 
 .daily-section {
   display: flex;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   background: var(--bg-secondary);
   border-radius: 8px;
 }
@@ -665,6 +680,38 @@ body {
   font-size: 13px;
   text-align: center;
   padding: 20px;
+}
+
+.daily-history-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.daily-history-year {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.daily-word-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.daily-word-term {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-style: italic;
+}
+
+.daily-word-pos {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.daily-word-def {
+  color: var(--text-secondary);
 }
 
 /* Error State */
