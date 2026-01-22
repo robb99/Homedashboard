@@ -164,13 +164,54 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/components/PlexCard.js` - Updated metrics and added Now Playing section
     - `frontend/src/styles/index.css` - Added styles for plex-now-playing and plex-session **(IMPLEMENTED)**
 
+### 15. New Feature: Web-Based Setup Wizard
+- **Branch:** `feature/setup-wizard`
+- **Goal:** Allow users to configure service credentials through a UI instead of manually editing `.env` files.
+- **Changes:**
+  - **Single Page Accordion UI:** All services configurable in one page with collapsible sections.
+  - **Test Connection:** Each service has a "Test Connection" button to verify credentials before saving.
+  - **Masked Passwords:** Sensitive fields show `********` when already configured; real values used for testing.
+  - **Atomic .env Writes:** Configuration saved with backups (`.env.backup.{timestamp}`) before each write.
+  - **First-Run Detection:** Dashboard shows setup wizard on first run, with Settings button to return later.
+- **Backend:**
+  - Added `backend/app/utils/env_manager.py` - Safe .env read/write with backup support.
+  - Added `backend/app/services/test_connections.py` - Connection test functions for all 7 services.
+  - Added `backend/app/routers/config.py` - Config API endpoints.
+  - Added config models to `backend/app/models/schemas.py` (ConfigStatus, ConfigUpdate, ConfigResponse, TestConnectionRequest, TestConnectionResult).
+- **Frontend:**
+  - Added `frontend/src/styles/setup.css` - Dark theme styles for setup wizard.
+  - Added `frontend/src/hooks/useSetup.js` - State management hook.
+  - Added `frontend/src/components/setup/` directory with 10 components:
+    - `SetupWizard.js` - Main container
+    - `AccordionSection.js` - Collapsible section
+    - `TestConnectionButton.js` - Reusable test button
+    - `UnifiSetup.js`, `ProxmoxSetup.js`, `PlexSetup.js`, `DockerSetup.js`, `CalendarSetup.js`, `WeatherSetup.js`, `NewsSetup.js` - Service forms
+  - Modified `frontend/src/App.js` - Routing between setup wizard and dashboard.
+  - Modified `frontend/src/components/Dashboard.js` - Added Settings button in header.
+- **API Endpoints:**
+  - `GET /api/config` - Get current config (passwords masked)
+  - `POST /api/config` - Save configuration to .env
+  - `GET /api/config/status` - Check which services are configured
+  - `POST /api/config/test/{service}` - Test connection with provided credentials
+- **Known Issues Fixed:**
+  - **Masked Password Testing:** Initial implementation sent masked `********` values to test endpoints, causing UniFi/Proxmox tests to fail even when services worked. Fixed by falling back to real credentials from settings when masked value is detected.
+  - **Docker "Configured" Status:** Docker showed as "Configured" even with no settings because it auto-detects local socket. Fixed to only show configured when `DOCKER_HOST` is explicitly set.
+- **Testing Results (Jan 21, 2026):**
+  - Plex: Test connection works correctly
+  - UniFi: Test connection now works (after fix for masked password)
+  - Proxmox: Test connection now works (after fix for masked password)
+  - Docker: Shows "Not configured" correctly when no explicit host set
+  - Weather: Test connection works with valid coordinates
+  - News: Test connection works with valid API key
+  - Calendar: Test connection verifies credentials file exists **(IMPLEMENTED)**
+
 ---
 
 ## Future Priority Improvements
 
 | # | Feature | Description | Status |
 |---|---------|-------------|--------|
-| 1 | Web-based Setup Wizard | Configure via UI instead of .env | Planned |
+| 1 | Web-based Setup Wizard | Configure via UI instead of .env | **Implemented** |
 | 2 | Service Toggles | Enable/disable services from settings panel | Planned |
 | 3 | Theme Support | Light/dark mode, custom accent colors | Planned |
 | 4 | Mobile Responsive | Better phone/tablet layout | Planned |
@@ -178,18 +219,20 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 
 ---
 
-## Current Status (As of Jan 20, 2026)
+## Current Status (As of Jan 21, 2026)
 
 ### Working Features
+- **Setup Wizard:** Web-based configuration UI with test connection buttons and automatic first-run detection.
 - **Network (Unifi):** Displaying wireless clients, WAN latency, total clients, 24h data usage, and device list.
 - **Proxmox:** Displaying node info, CPU/memory usage, and container/VM list.
 - **Plex:** Displaying total movie/show counts, active streams with user info, and 10 recently added items with posters.
 - **Calendar:** Displaying upcoming events in horizontal card layout.
-- **Weather:** Displaying today's and tomorrow's temperature in header (requires coordinates in `.env`).
-- **News:** Displaying rotating headlines in header (requires NewsAPI key in `.env`).
+- **Weather:** Displaying today's and tomorrow's temperature in header (configurable via setup wizard).
+- **News:** Displaying rotating headlines in header (configurable via setup wizard).
 - **DateTime:** Displaying current date/time in header.
 - **A Daily Byte:** Displaying 5 content sections (Quote, Trivia, Joke, History, Word) with 60-second rotation and 24-hour caching (no configuration required).
 - **Layout:** All cards fit on 1080p screen without vertical scrolling.
+- **Settings Access:** Settings button in dashboard header to return to setup wizard.
 
 ### Remaining Issues
 

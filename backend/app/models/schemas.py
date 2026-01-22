@@ -188,3 +188,155 @@ class DashboardStatus(BaseModel):
     docker: DockerStatus
     calendar: CalendarStatus
     last_updated: datetime = datetime.now()
+
+
+# =============================================================================
+# CONFIGURATION MODELS
+# =============================================================================
+class ServiceConfigStatus(BaseModel):
+    """Status of a single service's configuration."""
+    configured: bool = False
+    has_credentials: bool = False
+
+
+class ConfigStatus(BaseModel):
+    """Overall configuration status for all services."""
+    is_first_run: bool = True
+    unifi: ServiceConfigStatus = ServiceConfigStatus()
+    proxmox: ServiceConfigStatus = ServiceConfigStatus()
+    plex: ServiceConfigStatus = ServiceConfigStatus()
+    docker: ServiceConfigStatus = ServiceConfigStatus()
+    calendar: ServiceConfigStatus = ServiceConfigStatus()
+    weather: ServiceConfigStatus = ServiceConfigStatus()
+    news: ServiceConfigStatus = ServiceConfigStatus()
+
+
+class ConfigUpdate(BaseModel):
+    """Configuration update payload - all fields optional for partial updates."""
+    # UniFi
+    unifi_host: Optional[str] = None
+    unifi_username: Optional[str] = None
+    unifi_password: Optional[str] = None
+    unifi_site: Optional[str] = None
+    unifi_verify_ssl: Optional[bool] = None
+
+    # Proxmox
+    proxmox_host: Optional[str] = None
+    proxmox_user: Optional[str] = None
+    proxmox_token_name: Optional[str] = None
+    proxmox_token_value: Optional[str] = None
+    proxmox_node: Optional[str] = None
+    proxmox_verify_ssl: Optional[bool] = None
+
+    # Plex
+    plex_url: Optional[str] = None
+    plex_token: Optional[str] = None
+
+    # Docker
+    docker_host: Optional[str] = None
+
+    # Google Calendar
+    google_credentials_path: Optional[str] = None
+    google_calendar_ids: Optional[str] = None
+
+    # Weather
+    weather_latitude: Optional[float] = None
+    weather_longitude: Optional[float] = None
+    weather_enabled: Optional[bool] = None
+
+    # News
+    news_api_key: Optional[str] = None
+    news_country: Optional[str] = None
+    news_enabled: Optional[bool] = None
+
+    # Application Settings
+    poll_interval: Optional[int] = None
+    cache_ttl: Optional[int] = None
+    cors_origins: Optional[str] = None
+
+
+class ConfigResponse(BaseModel):
+    """Configuration response - passwords are masked."""
+    # UniFi
+    unifi_host: str = ""
+    unifi_username: str = ""
+    unifi_password: str = ""  # Will be masked
+    unifi_site: str = "default"
+    unifi_verify_ssl: bool = False
+
+    # Proxmox
+    proxmox_host: str = ""
+    proxmox_user: str = ""
+    proxmox_token_name: str = ""
+    proxmox_token_value: str = ""  # Will be masked
+    proxmox_node: str = "pve"
+    proxmox_verify_ssl: bool = False
+
+    # Plex
+    plex_url: str = ""
+    plex_token: str = ""  # Will be masked
+
+    # Docker
+    docker_host: str = ""
+
+    # Google Calendar
+    google_credentials_path: str = ""
+    google_calendar_ids: str = "primary"
+
+    # Weather
+    weather_latitude: float = 0.0
+    weather_longitude: float = 0.0
+    weather_enabled: bool = True
+
+    # News
+    news_api_key: str = ""  # Will be masked
+    news_country: str = "us"
+    news_enabled: bool = True
+
+    # Application Settings
+    poll_interval: int = 30
+    cache_ttl: int = 25
+    cors_origins: str = "http://localhost:3000"
+
+
+class TestConnectionRequest(BaseModel):
+    """Request payload for testing a service connection."""
+    # Common fields - service determined by endpoint
+    # UniFi
+    unifi_host: Optional[str] = None
+    unifi_username: Optional[str] = None
+    unifi_password: Optional[str] = None
+    unifi_site: Optional[str] = None
+    unifi_verify_ssl: Optional[bool] = None
+
+    # Proxmox
+    proxmox_host: Optional[str] = None
+    proxmox_user: Optional[str] = None
+    proxmox_token_name: Optional[str] = None
+    proxmox_token_value: Optional[str] = None
+    proxmox_node: Optional[str] = None
+    proxmox_verify_ssl: Optional[bool] = None
+
+    # Plex
+    plex_url: Optional[str] = None
+    plex_token: Optional[str] = None
+
+    # Docker
+    docker_host: Optional[str] = None
+
+    # Calendar
+    google_credentials_path: Optional[str] = None
+
+    # Weather
+    weather_latitude: Optional[float] = None
+    weather_longitude: Optional[float] = None
+
+    # News
+    news_api_key: Optional[str] = None
+
+
+class TestConnectionResult(BaseModel):
+    """Result of a connection test."""
+    success: bool
+    message: str
+    details: Optional[str] = None
