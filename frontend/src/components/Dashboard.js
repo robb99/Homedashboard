@@ -10,8 +10,9 @@ import { WeatherWidget } from './WeatherWidget';
 import { NewsWidget } from './NewsWidget';
 import { DateTimeWidget } from './DateTimeWidget';
 import { RefreshIndicator } from './RefreshIndicator';
+import '../styles/setup.css';
 
-export function Dashboard() {
+export function Dashboard({ onOpenSetup }) {
   const { data, loading, error, lastFetch } = useDashboard();
 
   return (
@@ -24,6 +25,11 @@ export function Dashboard() {
             <NewsWidget />
             <DateTimeWidget />
           </div>
+          {onOpenSetup && (
+            <button className="settings-btn" onClick={onOpenSetup} title="Settings">
+              &#9881; Settings
+            </button>
+          )}
         </div>
       </header>
 

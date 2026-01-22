@@ -7,6 +7,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_settings
 from app.routers.dashboard import router as dashboard_router
+from app.routers.config import router as config_router
 from app.services import (
     unifi_service,
     proxmox_service,
@@ -86,6 +87,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(dashboard_router)
+app.include_router(config_router)
 
 
 @app.get("/")
