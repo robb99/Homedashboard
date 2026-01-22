@@ -39,6 +39,14 @@ class UnifiService:
 
     async def get_status(self, use_cache: bool = True) -> UnifiStatus:
         """Get Unifi controller status."""
+        # Check if service is disabled
+        if not self.settings.unifi_enabled:
+            return UnifiStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:

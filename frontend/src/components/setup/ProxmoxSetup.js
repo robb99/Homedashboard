@@ -100,6 +100,20 @@ export function ProxmoxSetup({
             </label>
           </div>
         </div>
+        <div className="form-row single">
+          <div className="form-checkbox-group">
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              id="proxmox_enabled"
+              checked={config.proxmox_enabled !== false}
+              onChange={(e) => updateField('proxmox_enabled', e.target.checked)}
+            />
+            <label className="form-checkbox-label" htmlFor="proxmox_enabled">
+              Enable Proxmox Monitoring
+            </label>
+          </div>
+        </div>
         <TestConnectionButton
           onTest={handleTest}
           testing={testing}

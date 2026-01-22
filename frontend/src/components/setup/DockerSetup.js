@@ -38,6 +38,20 @@ export function DockerSetup({
             </span>
           </div>
         </div>
+        <div className="form-row single">
+          <div className="form-checkbox-group">
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              id="docker_enabled"
+              checked={config.docker_enabled !== false}
+              onChange={(e) => updateField('docker_enabled', e.target.checked)}
+            />
+            <label className="form-checkbox-label" htmlFor="docker_enabled">
+              Enable Docker Monitoring
+            </label>
+          </div>
+        </div>
         <TestConnectionButton
           onTest={handleTest}
           testing={testing}

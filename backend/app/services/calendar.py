@@ -71,6 +71,14 @@ class CalendarService:
 
     async def get_status(self, use_cache: bool = True) -> CalendarStatus:
         """Get upcoming calendar events for the next 7 days."""
+        # Check if service is disabled
+        if not self.settings.calendar_enabled:
+            return CalendarStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:

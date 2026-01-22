@@ -86,6 +86,20 @@ export function UnifiSetup({
             </label>
           </div>
         </div>
+        <div className="form-row single">
+          <div className="form-checkbox-group">
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              id="unifi_enabled"
+              checked={config.unifi_enabled !== false}
+              onChange={(e) => updateField('unifi_enabled', e.target.checked)}
+            />
+            <label className="form-checkbox-label" htmlFor="unifi_enabled">
+              Enable UniFi Monitoring
+            </label>
+          </div>
+        </div>
         <TestConnectionButton
           onTest={handleTest}
           testing={testing}

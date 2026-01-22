@@ -122,6 +122,7 @@ async def get_config():
         unifi_password=_mask_value("unifi_password", settings.unifi_password),
         unifi_site=settings.unifi_site,
         unifi_verify_ssl=settings.unifi_verify_ssl,
+        unifi_enabled=settings.unifi_enabled,
         # Proxmox
         proxmox_host=settings.proxmox_host,
         proxmox_user=settings.proxmox_user,
@@ -129,14 +130,18 @@ async def get_config():
         proxmox_token_value=_mask_value("proxmox_token_value", settings.proxmox_token_value),
         proxmox_node=settings.proxmox_node,
         proxmox_verify_ssl=settings.proxmox_verify_ssl,
+        proxmox_enabled=settings.proxmox_enabled,
         # Plex
         plex_url=settings.plex_url,
         plex_token=_mask_value("plex_token", settings.plex_token),
+        plex_enabled=settings.plex_enabled,
         # Docker
         docker_host=settings.docker_host or "",
+        docker_enabled=settings.docker_enabled,
         # Calendar
         google_credentials_path=settings.google_credentials_path,
         google_calendar_ids=settings.google_calendar_ids,
+        calendar_enabled=settings.calendar_enabled,
         # Weather
         weather_latitude=settings.weather_latitude,
         weather_longitude=settings.weather_longitude,
@@ -173,6 +178,8 @@ async def save_config(config: ConfigUpdate):
     add_if_set("unifi_site", config.unifi_site, "UNIFI_SITE")
     if config.unifi_verify_ssl is not None:
         updates["UNIFI_VERIFY_SSL"] = str(config.unifi_verify_ssl).lower()
+    if config.unifi_enabled is not None:
+        updates["UNIFI_ENABLED"] = str(config.unifi_enabled).lower()
 
     # Proxmox
     add_if_set("proxmox_host", config.proxmox_host, "PROXMOX_HOST")
@@ -182,17 +189,25 @@ async def save_config(config: ConfigUpdate):
     add_if_set("proxmox_node", config.proxmox_node, "PROXMOX_NODE")
     if config.proxmox_verify_ssl is not None:
         updates["PROXMOX_VERIFY_SSL"] = str(config.proxmox_verify_ssl).lower()
+    if config.proxmox_enabled is not None:
+        updates["PROXMOX_ENABLED"] = str(config.proxmox_enabled).lower()
 
     # Plex
     add_if_set("plex_url", config.plex_url, "PLEX_URL")
     add_if_set("plex_token", config.plex_token, "PLEX_TOKEN")
+    if config.plex_enabled is not None:
+        updates["PLEX_ENABLED"] = str(config.plex_enabled).lower()
 
     # Docker
     add_if_set("docker_host", config.docker_host, "DOCKER_HOST")
+    if config.docker_enabled is not None:
+        updates["DOCKER_ENABLED"] = str(config.docker_enabled).lower()
 
     # Calendar
     add_if_set("google_credentials_path", config.google_credentials_path, "GOOGLE_CREDENTIALS_PATH")
     add_if_set("google_calendar_ids", config.google_calendar_ids, "GOOGLE_CALENDAR_IDS")
+    if config.calendar_enabled is not None:
+        updates["CALENDAR_ENABLED"] = str(config.calendar_enabled).lower()
 
     # Weather
     if config.weather_latitude is not None:

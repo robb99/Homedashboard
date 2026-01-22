@@ -33,6 +33,14 @@ class DockerService:
 
     async def get_status(self, use_cache: bool = True) -> DockerStatus:
         """Get Docker container status."""
+        # Check if service is disabled
+        if not self.settings.docker_enabled:
+            return DockerStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:

@@ -28,6 +28,14 @@ class ProxmoxService:
 
     async def get_status(self, use_cache: bool = True) -> ProxmoxStatus:
         """Get Proxmox cluster status."""
+        # Check if service is disabled
+        if not self.settings.proxmox_enabled:
+            return ProxmoxStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:

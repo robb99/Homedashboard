@@ -28,14 +28,20 @@ scheduler = AsyncIOScheduler()
 
 
 async def poll_services():
-    """Background task to poll all services."""
-    logger.info("Polling all services...")
+    """Background task to poll all enabled services."""
+    settings = get_settings()
+    logger.info("Polling enabled services...")
     try:
-        await unifi_service.get_status(use_cache=False)
-        await proxmox_service.get_status(use_cache=False)
-        await plex_service.get_status(use_cache=False)
-        await docker_service.get_status(use_cache=False)
-        await calendar_service.get_status(use_cache=False)
+        if settings.unifi_enabled:
+            await unifi_service.get_status(use_cache=False)
+        if settings.proxmox_enabled:
+            await proxmox_service.get_status(use_cache=False)
+        if settings.plex_enabled:
+            await plex_service.get_status(use_cache=False)
+        if settings.docker_enabled:
+            await docker_service.get_status(use_cache=False)
+        if settings.calendar_enabled:
+            await calendar_service.get_status(use_cache=False)
         logger.info("Polling complete")
     except Exception as e:
         logger.error(f"Error during polling: {e}")

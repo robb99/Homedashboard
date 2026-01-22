@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     unifi_password: str = ""
     unifi_site: str = "default"
     unifi_verify_ssl: bool = False
+    unifi_enabled: bool = True
 
     # Proxmox
     proxmox_host: str = ""
@@ -18,17 +19,21 @@ class Settings(BaseSettings):
     proxmox_token_value: str = ""
     proxmox_node: str = "pve"
     proxmox_verify_ssl: bool = False
+    proxmox_enabled: bool = True
 
     # Plex
     plex_url: str = ""
     plex_token: str = ""
+    plex_enabled: bool = True
 
     # Docker
     docker_host: Optional[str] = None
+    docker_enabled: bool = True
 
     # Google Calendar
     google_credentials_path: str = ""
     google_calendar_ids: str = "primary"
+    calendar_enabled: bool = True
 
     # Weather (Open-Meteo - no API key required)
     weather_latitude: float = 0.0
