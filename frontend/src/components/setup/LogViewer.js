@@ -24,6 +24,8 @@ export function LogViewer({ onBack }) {
   const [localLogs, setLocalLogs] = useState(() => getLogs().slice().reverse());
   const [backendLogs, setBackendLogs] = useState([]);
   const [loadingBackend, setLoadingBackend] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [levelFilter, setLevelFilter] = useState('all');
 
   useEffect(() => {
     const unsubscribe = subscribeToLogs(
@@ -91,6 +93,33 @@ export function LogViewer({ onBack }) {
     return merged;
   }, [localLogs, backendLogs]);
 
+  const filteredLogs = useMemo(() => {
+    const needle = filterText.trim().toLowerCase();
+    const levelMatches = level => {
+      if (levelFilter === 'all') return true;
+      if (levelFilter === 'warn') {
+        return level === 'warn' || level === 'warning';
+      }
+      return level === levelFilter;
+    };
+    return logs.filter(entry => {
+      if (!levelMatches(entry.level)) {
+        return false;
+      }
+      if (!needle) return true;
+      const haystack = [
+        entry.message,
+        entry.source,
+        entry.logger,
+        typeof entry.details === 'string' ? entry.details : JSON.stringify(entry.details || ''),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [logs, filterText, levelFilter]);
+
   return (
     <div className="setup-wizard">
       <div className="setup-container log-viewer">
@@ -108,13 +137,35 @@ export function LogViewer({ onBack }) {
               Clear Log
             </button>
           </div>
+          <div className="log-filters">
+            <input
+              className="log-filter-input"
+              type="text"
+              placeholder="Filter by message, source, or details"
+              value={filterText}
+              onChange={event => setFilterText(event.target.value)}
+            />
+            <select
+              className="log-filter-select"
+              value={levelFilter}
+              onChange={event => setLevelFilter(event.target.value)}
+            >
+              <option value="all">All levels</option>
+              <option value="error">Error</option>
+              <option value="warn">Warn/Warning</option>
+              <option value="info">Info</option>
+              <option value="debug">Debug</option>
+            </select>
+          </div>
         </div>
 
         <div className="log-list">
-          {logs.length === 0 && (
-            <div className="log-empty">No errors logged yet.</div>
+          {filteredLogs.length === 0 && (
+            <div className="log-empty">
+              {logs.length === 0 ? 'No errors logged yet.' : 'No logs match your filter.'}
+            </div>
           )}
-          {logs.map(entry => (
+          {filteredLogs.map(entry => (
             <div key={entry.id} className={`log-entry log-${entry.level}`}>
               <div className="log-meta">
                 <span className="log-level">{entry.level}</span>

@@ -179,6 +179,21 @@ class NewsStatus(BaseStatus):
 
 
 # =============================================================================
+# QUOTES MODELS
+# =============================================================================
+class QuoteItem(BaseModel):
+    text: str
+    author: Optional[str] = None
+
+
+class QuotesResponse(BaseModel):
+    quotes: List[QuoteItem] = []
+    source: str = "unknown"  # quotable, zenquotes, fallback
+    fallback: bool = False
+    reason: Optional[str] = None
+
+
+# =============================================================================
 # DASHBOARD AGGREGATE
 # =============================================================================
 class DashboardStatus(BaseModel):

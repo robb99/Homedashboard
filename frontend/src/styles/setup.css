@@ -387,6 +387,31 @@
   margin-top: 16px;
 }
 
+.log-filters {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.log-filter-input,
+.log-filter-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.log-filter-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.log-filter-select {
+  min-width: 140px;
+}
+
 .log-list {
   display: flex;
   flex-direction: column;
@@ -494,6 +519,11 @@
   .log-actions .skip-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .log-filters {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .form-row {

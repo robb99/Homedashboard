@@ -1,0 +1,9 @@
+{
+  "unifi_enabled": true,
+  "proxmox_enabled": true,
+  "plex_enabled": true,
+  "docker_enabled": false,
+  "calendar_enabled": true,
+  "weather_enabled": true,
+  "news_enabled": true
+}

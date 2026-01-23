@@ -44,6 +44,26 @@ const FALLBACK_DATA = {
   ]
 };
 
+function logFallback(section, reason, details = null) {
+  logEvent({
+    level: 'warn',
+    source: `DailyByte/${section}`,
+    message: 'Using fallback data',
+    details: {
+      reason,
+      ...(details ? { details } : {}),
+    },
+  });
+}
+
+function buildErrorDetails(error, extra = {}) {
+  return {
+    error: error?.message || error,
+    ...getNetworkContext(),
+    ...extra,
+  };
+}
+
 function getCachedData() {
   try {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -59,7 +79,7 @@ function getCachedData() {
       level: 'warn',
       source: 'DailyByte/cache',
       message: 'Failed to read local cache',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
   return null;
@@ -77,30 +97,70 @@ function setCachedData(data) {
       level: 'warn',
       source: 'DailyByte/cache',
       message: 'Failed to write local cache',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
 }
 
-// ZenQuotes API - returns array of 50 quotes, we pick 5 random ones
+function getNetworkContext() {
+  return {
+    online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+  };
+}
+
+// Quotes fetched via backend to avoid CORS issues and centralize logging
 async function fetchQuotes() {
   try {
-    const response = await fetch('https://zenquotes.io/api/quotes');
-    const data = await response.json();
-    if (Array.isArray(data) && data.length > 0) {
-      // Shuffle and pick 5 random quotes
-      const shuffled = data.sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, ITEMS_PER_TYPE).map(q => ({ text: q.q, author: q.a }));
+    const response = await fetch('/api/quotes');
+    if (!response.ok) {
+      const reason = `Backend returned HTTP ${response.status}`;
+      logEvent({
+        level: 'error',
+        source: 'DailyByte/quotes',
+        message: 'Failed to fetch quotes from backend',
+        details: {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          ...getNetworkContext(),
+        },
+      });
+      logFallback('quotes', reason, {
+        url: response.url,
+        ...getNetworkContext(),
+      });
+      return FALLBACK_DATA.quotes;
     }
+
+    const payload = await response.json();
+    if (payload?.fallback) {
+      logFallback('quotes', payload.reason || 'Backend reported fallback', {
+        source: payload.source,
+        ...getNetworkContext(),
+      });
+    }
+
+    if (Array.isArray(payload?.quotes) && payload.quotes.length > 0) {
+      return payload.quotes;
+    }
+
+    logFallback('quotes', 'Backend returned empty or invalid quotes payload', {
+      payload,
+      ...getNetworkContext(),
+    });
+    return FALLBACK_DATA.quotes;
   } catch (e) {
-    console.error('Error fetching quotes:', e);
+    console.error('Error fetching quotes from backend:', e);
     logEvent({
       level: 'error',
       source: 'DailyByte/quotes',
-      message: 'Failed to fetch quotes',
-      details: e?.message || e,
+      message: 'Failed to fetch quotes from backend',
+      details: buildErrorDetails(e),
     });
+    logFallback('quotes', 'Backend request failed', buildErrorDetails(e));
   }
+
   return FALLBACK_DATA.quotes;
 }
 
@@ -108,15 +168,20 @@ async function fetchQuotes() {
 async function fetchJokes() {
   try {
     const response = await fetch('https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?safe-mode&amount=5');
-    const data = await response.json();
-    if (data.jokes && Array.isArray(data.jokes)) {
-      return data.jokes.map(joke => {
-        if (joke.type === 'twopart') {
-          return { setup: joke.setup, punchline: joke.delivery };
-        } else {
-          return { setup: joke.joke, punchline: null };
-        }
-      });
+    if (!response.ok) {
+      logFallback('jokes', `JokeAPI returned HTTP ${response.status}`);
+    } else {
+      const data = await response.json();
+      if (data.jokes && Array.isArray(data.jokes)) {
+        return data.jokes.map(joke => {
+          if (joke.type === 'twopart') {
+            return { setup: joke.setup, punchline: joke.delivery };
+          } else {
+            return { setup: joke.joke, punchline: null };
+          }
+        });
+      }
+      logFallback('jokes', 'JokeAPI returned an empty or invalid payload');
     }
   } catch (e) {
     console.error('Error fetching jokes:', e);
@@ -124,9 +189,10 @@ async function fetchJokes() {
       level: 'error',
       source: 'DailyByte/jokes',
       message: 'Failed to fetch jokes',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
+  logFallback('jokes', 'Using built-in fallback jokes due to fetch failure');
   return FALLBACK_DATA.jokes;
 }
 
@@ -161,15 +227,17 @@ async function fetchTrivia() {
       }
       return validResults;
     }
+    logFallback('trivia', `Only ${validResults.length} trivia facts fetched successfully`);
   } catch (e) {
     console.error('Error fetching trivia:', e);
     logEvent({
       level: 'error',
       source: 'DailyByte/trivia',
       message: 'Failed to fetch trivia',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
+  logFallback('trivia', 'Using built-in fallback trivia due to fetch failure');
   return FALLBACK_DATA.trivia;
 }
 
@@ -182,14 +250,19 @@ async function fetchHistory() {
     const response = await fetch(
       `https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${month}/${day}`
     );
-    const data = await response.json();
-    if (data.events && Array.isArray(data.events) && data.events.length > 0) {
-      // Get 5 random events from the list
-      const shuffled = data.events.sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, ITEMS_PER_TYPE).map(e => ({
-        year: e.year,
-        text: e.text
-      }));
+    if (!response.ok) {
+      logFallback('history', `Wikimedia returned HTTP ${response.status}`);
+    } else {
+      const data = await response.json();
+      if (data.events && Array.isArray(data.events) && data.events.length > 0) {
+        // Get 5 random events from the list
+        const shuffled = data.events.sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, ITEMS_PER_TYPE).map(e => ({
+          year: e.year,
+          text: e.text
+        }));
+      }
+      logFallback('history', 'Wikimedia returned an empty or invalid payload');
     }
   } catch (e) {
     console.error('Error fetching history:', e);
@@ -197,9 +270,10 @@ async function fetchHistory() {
       level: 'error',
       source: 'DailyByte/history',
       message: 'Failed to fetch history',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
+  logFallback('history', 'Using built-in fallback history due to fetch failure');
   return FALLBACK_DATA.history;
 }
 
@@ -207,13 +281,24 @@ async function fetchHistory() {
 async function fetchWords() {
   try {
     const words = [];
+    let fallbackCount = 0;
     for (let i = 0; i < ITEMS_PER_TYPE; i++) {
       try {
         const wordRes = await fetch('https://random-word-api.herokuapp.com/word');
+        if (!wordRes.ok) {
+          fallbackCount += 1;
+          words.push(FALLBACK_DATA.words[i]);
+          continue;
+        }
         const wordData = await wordRes.json();
         const word = wordData[0];
 
         const defRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+        if (!defRes.ok) {
+          fallbackCount += 1;
+          words.push(FALLBACK_DATA.words[i]);
+          continue;
+        }
         const defData = await defRes.json();
 
         if (Array.isArray(defData) && defData[0]?.meanings?.[0]) {
@@ -223,13 +308,21 @@ async function fetchWords() {
             definition: defData[0].meanings[0].definitions[0]?.definition || 'No definition available'
           });
         } else {
-          // If no definition found, try another word
+          fallbackCount += 1;
           words.push(FALLBACK_DATA.words[i]);
         }
       } catch (e) {
         // If individual word fails, use fallback
+        fallbackCount += 1;
         words.push(FALLBACK_DATA.words[i]);
       }
+    }
+    if (fallbackCount > 0) {
+      logFallback(
+        'words',
+        `Used fallback definitions for ${fallbackCount} of ${ITEMS_PER_TYPE} words`,
+        'Random word or dictionary lookup failed or returned no definitions'
+      );
     }
     return words.length > 0 ? words : FALLBACK_DATA.words;
   } catch (e) {
@@ -238,9 +331,10 @@ async function fetchWords() {
       level: 'error',
       source: 'DailyByte/words',
       message: 'Failed to fetch words',
-      details: e?.message || e,
+      details: buildErrorDetails(e),
     });
   }
+  logFallback('words', 'Using built-in fallback words due to fetch failure');
   return FALLBACK_DATA.words;
 }
 

@@ -304,7 +304,20 @@ This document summarizes the major troubleshooting steps and fixes applied to th
   - News: Test connection works with valid API key
   - Calendar: Test connection verifies credentials file exists **(IMPLEMENTED)**
 
-### 16. Maintenance: Daily Byte Content Refresh and Trivia Source Update
+### 16. Bugfix: Daily Byte Quote API Fallback
+- **Goal:** Fix `NetworkError` when fetching quotes for the Daily Byte card and improve reliability.
+- **Problem:** The card was using an outdated API endpoint (`zenquotes.io/api/quotes`) that was causing intermittent network errors in the browser. The `SUMMARY.md` also had conflicting information about which API was in use.
+- **Solution:**
+    - **API Fallback Logic:** Implemented a primary/secondary API system in `frontend/src/components/DailyByteCard.js`.
+        1.  **Primary:** It first tries to fetch 5 random quotes from the **Quotable API** (`https://api.quotable.io/quotes/random?limit=5`).
+        2.  **Secondary:** If the Quotable API fails, it falls back to trying the **ZenQuotes API** (`https://zenquotes.io/api/quotes`).
+        3.  **Hardcoded Fallback:** If both APIs fail, it logs the errors and uses the built-in, hardcoded quotes to ensure the card always has content.
+    - **Documentation:** Corrected the `SUMMARY.md` to accurately reflect the new API fetching logic.
+- **Files Modified:**
+    - `frontend/src/components/DailyByteCard.js` - Updated `fetchQuotes` function with fallback logic.
+    - `SUMMARY.md` - Added this section to document the fix. **(IMPLEMENTED)**
+
+### 17. Maintenance: Daily Byte Content Refresh and Trivia Source Update
 **Date:** 2026-01-23
 **Branch:** main
 **Summary:** Reduce Daily Byte repetition and replace trivia API source.
@@ -316,7 +329,7 @@ This document summarizes the major troubleshooting steps and fixes applied to th
   - **Trivia Source:** Switched from Numbers API to Useless Facts API.
   - **Notes:** Open Trivia DB was tested but not used.
 
-### 17. Feature: Running Log Viewer with Backend Log API
+### 18. Feature: Running Log Viewer with Backend Log API
 **Date:** 2026-01-23
 **Branch:** main
 **Summary:** Add a settings-accessible running log viewer that aggregates frontend and backend errors.
@@ -332,6 +345,56 @@ This document summarizes the major troubleshooting steps and fixes applied to th
   - **Files Modified:** `frontend/src/App.js`, `frontend/src/components/setup/SetupWizard.js`, `frontend/src/styles/setup.css`, `frontend/src/hooks/useDashboard.js`, `frontend/src/hooks/useSetup.js`, `frontend/src/components/DailyByteCard.js`, `backend/app/main.py`, `backend/app/models/schemas.py`
 
 ---
+
+### 19. Enhancement: Daily Byte Quotes via Backend + Fallback Logging + Log Filters
+**Date:** 2026-01-23
+**Branch:** main
+**Summary:** Move Daily Byte quote fetching to backend to avoid CORS/DNS issues and improve log visibility with fallback reasons and filters.
+**What Worked:** Quotes now fetched from `/api/quotes`; fallback reasons logged; Log Viewer supports filtering by text and level.
+**What Failed:** None noted.
+
+- **Backend:**
+  - Added `/api/quotes` endpoint with primary (Quotable), secondary (ZenQuotes), and local fallback quotes.
+  - Logged fallback reasons in backend logs.
+  - Added `QuoteItem` and `QuotesResponse` models.
+- **Frontend:**
+  - Daily Byte quotes now fetched from backend.
+  - Client logs include fallback reasons and network context when fallback is used.
+  - Log Viewer includes a text filter and level filter (warn/warning handled).
+- **Files Added:**
+  - `backend/app/services/quotes.py`
+  - `backend/app/routers/quotes.py`
+- **Files Modified:**
+  - `backend/app/main.py`
+  - `backend/app/models/schemas.py`
+  - `frontend/src/components/DailyByteCard.js`
+  - `frontend/src/components/setup/LogViewer.js`
+  - `frontend/src/styles/setup.css` **(IMPLEMENTED)**
+
+### 19. Enhancement: Daily Byte Quotes via Backend + Fallback Logging + Log Filters
+**Date:** 2026-01-23
+**Branch:** main
+**Summary:** Move Daily Byte quote fetching to backend to avoid CORS/DNS issues and improve log visibility with fallback reasons and filters.
+**What Worked:** Quotes now fetched from `/api/quotes`; fallback reasons logged; Log Viewer supports filtering by text and level.
+**What Failed:** None noted.
+
+- **Backend:**
+  - Added `/api/quotes` endpoint with primary (Quotable), secondary (ZenQuotes), and local fallback quotes.
+  - Logged fallback reasons in backend logs.
+  - Added `QuoteItem` and `QuotesResponse` models.
+- **Frontend:**
+  - Daily Byte quotes now fetched from backend.
+  - Client logs include fallback reasons and network context when fallback is used.
+  - Log Viewer includes a text filter and level filter (warn/warning handled).
+- **Files Added:**
+  - `backend/app/services/quotes.py`
+  - `backend/app/routers/quotes.py`
+- **Files Modified:**
+  - `backend/app/main.py`
+  - `backend/app/models/schemas.py`
+  - `frontend/src/components/DailyByteCard.js`
+  - `frontend/src/components/setup/LogViewer.js`
+  - `frontend/src/styles/setup.css` **(IMPLEMENTED)**
 
 ## Future Priority Improvements
 

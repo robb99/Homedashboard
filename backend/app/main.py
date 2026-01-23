@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.routers.dashboard import router as dashboard_router
 from app.routers.config import router as config_router
 from app.routers.logs import router as logs_router
+from app.routers.quotes import router as quotes_router
 from app.services import (
     unifi_service,
     proxmox_service,
@@ -98,6 +99,7 @@ app.add_middleware(
 app.include_router(dashboard_router)
 app.include_router(config_router)
 app.include_router(logs_router)
+app.include_router(quotes_router)
 
 
 @app.get("/")
