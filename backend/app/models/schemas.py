@@ -350,3 +350,19 @@ class TestConnectionResult(BaseModel):
     success: bool
     message: str
     details: Optional[str] = None
+
+
+# =============================================================================
+# LOGGING MODELS
+# =============================================================================
+class LogEntry(BaseModel):
+    id: str
+    timestamp: str
+    level: str
+    logger: str
+    message: str
+    details: Optional[str] = None
+
+
+class LogsResponse(BaseModel):
+    entries: List[LogEntry]

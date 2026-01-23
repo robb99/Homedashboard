@@ -1,13 +1,33 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logEvent } from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const REFRESH_INTERVAL = parseInt(process.env.REACT_APP_REFRESH_INTERVAL || '30000', 10);
 
 export function useDashboard() {
   const [data, setData] = useState(null);
+  const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetch, setLastFetch] = useState(null);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/config`);
+      if (response.ok) {
+        const result = await response.json();
+        setConfig(result);
+      }
+    } catch (err) {
+      console.error('Failed to fetch config:', err);
+      logEvent({
+        level: 'error',
+        source: 'useDashboard/config',
+        message: 'Failed to fetch config',
+        details: err?.message || err,
+      });
+    }
+  }, []);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -25,20 +45,27 @@ export function useDashboard() {
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
       setError(err.message);
+      logEvent({
+        level: 'error',
+        source: 'useDashboard/dashboard',
+        message: 'Failed to fetch dashboard data',
+        details: err?.message || err,
+      });
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    fetchConfig();
     fetchDashboard();
 
     const interval = setInterval(fetchDashboard, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [fetchDashboard]);
+  }, [fetchConfig, fetchDashboard]);
 
-  return { data, loading, error, lastFetch, refresh: fetchDashboard };
+  return { data, config, loading, error, lastFetch, refresh: fetchDashboard, refreshConfig: fetchConfig };
 }
 
 export function formatUptime(seconds) {

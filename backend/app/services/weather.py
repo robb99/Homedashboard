@@ -5,6 +5,7 @@ import logging
 from app.config import get_settings
 from app.models.schemas import WeatherStatus, WeatherForecast, StatusLevel
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -50,24 +51,26 @@ def get_weather_description(code: int) -> tuple:
 
 class WeatherService:
     def __init__(self):
-        self.settings = get_settings()
         self.base_url = "https://api.open-meteo.com/v1/forecast"
 
     async def get_status(self, use_cache: bool = True) -> WeatherStatus:
         """Get weather forecast from Open-Meteo API."""
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("weather"):
+            return WeatherStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:
                 return cached
 
-        if not self.settings.weather_enabled:
-            return WeatherStatus(
-                status=StatusLevel.UNKNOWN,
-                error_message="Weather not enabled",
-                last_updated=datetime.now(),
-            )
+        settings = get_settings()
 
-        if self.settings.weather_latitude == 0.0 and self.settings.weather_longitude == 0.0:
+        if settings.weather_latitude == 0.0 and settings.weather_longitude == 0.0:
             return WeatherStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Weather location not configured",
@@ -77,8 +80,8 @@ class WeatherService:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 params = {
-                    "latitude": self.settings.weather_latitude,
-                    "longitude": self.settings.weather_longitude,
+                    "latitude": settings.weather_latitude,
+                    "longitude": settings.weather_longitude,
                     "daily": "temperature_2m_max,temperature_2m_min,weathercode",
                     "current_weather": "true",
                     "temperature_unit": "fahrenheit",

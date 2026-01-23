@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.config import get_settings
 from app.routers.dashboard import router as dashboard_router
 from app.routers.config import router as config_router
+from app.routers.logs import router as logs_router
 from app.services import (
     unifi_service,
     proxmox_service,
@@ -15,6 +16,7 @@ from app.services import (
     docker_service,
     calendar_service,
 )
+from app.utils.log_buffer import log_buffer
 
 # Configure logging
 logging.basicConfig(
@@ -22,6 +24,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+logging.getLogger().addHandler(log_buffer)
 
 # Scheduler for background tasks
 scheduler = AsyncIOScheduler()
@@ -94,6 +97,7 @@ app.add_middleware(
 # Include routers
 app.include_router(dashboard_router)
 app.include_router(config_router)
+app.include_router(logs_router)
 
 
 @app.get("/")

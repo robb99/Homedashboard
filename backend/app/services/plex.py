@@ -5,6 +5,7 @@ import logging
 from app.config import get_settings
 from app.models.schemas import PlexStatus, PlexItem, PlexSession, StatusLevel
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +14,26 @@ CACHE_KEY = "plex_status"
 
 class PlexService:
     def __init__(self):
-        self.settings = get_settings()
+        pass
 
     async def get_status(self, use_cache: bool = True) -> PlexStatus:
         """Get Plex recently added items."""
-        # Check if service is disabled
-        if not self.settings.plex_enabled:
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("plex"):
             return PlexStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Service disabled",
                 last_updated=datetime.now(),
             )
 
+        settings = get_settings()
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:
                 return cached
 
-        if not self.settings.plex_url or not self.settings.plex_token:
+        if not settings.plex_url or not settings.plex_token:
             return PlexStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Plex not configured",
@@ -40,12 +43,12 @@ class PlexService:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 headers = {
-                    "X-Plex-Token": self.settings.plex_token,
+                    "X-Plex-Token": settings.plex_token,
                     "Accept": "application/json",
                 }
 
                 # Get recently added
-                recent_url = f"{self.settings.plex_url}/library/recentlyAdded"
+                recent_url = f"{settings.plex_url}/library/recentlyAdded"
                 response = await client.get(recent_url, headers=headers)
                 data = response.json()
 
@@ -59,7 +62,7 @@ class PlexService:
                     thumb_path = item.get("thumb") or item.get("grandparentThumb")
                     if thumb_path:
                         # Plex often returns relative URLs for thumbs, prepend the base URL
-                        thumb_url = f"{self.settings.plex_url}{thumb_path}?X-Plex-Token={self.settings.plex_token}"
+                        thumb_url = f"{settings.plex_url}{thumb_path}?X-Plex-Token={settings.plex_token}"
                     else:
                         thumb_url = None
 
@@ -75,7 +78,7 @@ class PlexService:
                     recent_items.append(plex_item)
 
                 # Get library sections
-                sections_url = f"{self.settings.plex_url}/library/sections"
+                sections_url = f"{settings.plex_url}/library/sections"
                 sections_response = await client.get(sections_url, headers=headers)
                 sections_data = sections_response.json()
                 directories = sections_data.get("MediaContainer", {}).get("Directory", [])
@@ -89,21 +92,21 @@ class PlexService:
                     section_key = directory.get("key", "")
                     if section_type == "movie":
                         # Get movie count - use X-Plex-Container-Size=0 to only get count
-                        section_url = f"{self.settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
+                        section_url = f"{settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
                         section_response = await client.get(section_url, headers=headers)
                         section_data = section_response.json()
                         container = section_data.get("MediaContainer", {})
                         movie_count += container.get("totalSize", container.get("size", 0))
                     elif section_type == "show":
                         # Get show count - use X-Plex-Container-Size=0 to only get count
-                        section_url = f"{self.settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
+                        section_url = f"{settings.plex_url}/library/sections/{section_key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0"
                         section_response = await client.get(section_url, headers=headers)
                         section_data = section_response.json()
                         container = section_data.get("MediaContainer", {})
                         show_count += container.get("totalSize", container.get("size", 0))
 
                 # Get active sessions
-                sessions_url = f"{self.settings.plex_url}/status/sessions"
+                sessions_url = f"{settings.plex_url}/status/sessions"
                 sessions_response = await client.get(sessions_url, headers=headers)
                 sessions_data = sessions_response.json()
                 session_metadata = sessions_data.get("MediaContainer", {}).get("Metadata", [])

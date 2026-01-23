@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logEvent } from '../utils/logger';
 
 const API_BASE = '/api/config';
 
@@ -32,6 +33,12 @@ export function useSetup() {
       }
     } catch (error) {
       console.error('Failed to fetch config:', error);
+      logEvent({
+        level: 'error',
+        source: 'useSetup/config',
+        message: 'Failed to fetch config/status',
+        details: error?.message || error,
+      });
     } finally {
       setLoading(false);
     }
@@ -69,6 +76,12 @@ export function useSetup() {
         details: error.message,
       };
       setTestResults(prev => ({ ...prev, [service]: errorResult }));
+      logEvent({
+        level: 'error',
+        source: `useSetup/test/${service}`,
+        message: 'Connection test failed',
+        details: error?.message || error,
+      });
       return errorResult;
     } finally {
       setTestingService(null);
@@ -100,6 +113,12 @@ export function useSetup() {
       }
     } catch (error) {
       setSaveResult({ success: false, message: error.message });
+      logEvent({
+        level: 'error',
+        source: 'useSetup/save',
+        message: 'Failed to save configuration',
+        details: error?.message || error,
+      });
       return { success: false };
     } finally {
       setSaving(false);
@@ -142,6 +161,11 @@ export function useConfigStatus() {
       })
       .catch(() => {
         setLoading(false);
+        logEvent({
+          level: 'error',
+          source: 'useConfigStatus',
+          message: 'Failed to fetch config status',
+        });
       });
   }, []);
 

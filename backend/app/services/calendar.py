@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 from app.config import get_settings
 from app.models.schemas import CalendarStatus, CalendarEvent, StatusLevel
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,12 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 class CalendarService:
     def __init__(self):
-        self.settings = get_settings()
         self._service = None
 
     def _get_credentials(self):
         """Get Google API credentials."""
-        creds_path = self.settings.google_credentials_path
+        settings = get_settings()
+        creds_path = settings.google_credentials_path
 
         if not creds_path or not os.path.exists(creds_path):
             return None
@@ -71,20 +72,22 @@ class CalendarService:
 
     async def get_status(self, use_cache: bool = True) -> CalendarStatus:
         """Get upcoming calendar events for the next 7 days."""
-        # Check if service is disabled
-        if not self.settings.calendar_enabled:
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("calendar"):
             return CalendarStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Service disabled",
                 last_updated=datetime.now(),
             )
 
+        settings = get_settings()
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:
                 return cached
 
-        if not self.settings.google_credentials_path:
+        if not settings.google_credentials_path:
             return CalendarStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Google Calendar not configured",
@@ -106,7 +109,7 @@ class CalendarService:
 
             all_events = []
 
-            for calendar_id in self.settings.calendar_ids_list:
+            for calendar_id in settings.calendar_ids_list:
                 try:
                     # Get calendar name
                     calendar = service.calendars().get(calendarId=calendar_id).execute()

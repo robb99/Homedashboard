@@ -6,6 +6,7 @@ import logging
 from app.config import get_settings
 from app.models.schemas import UnifiStatus, UnifiDevice, UnifiClient, StatusLevel
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -14,18 +15,17 @@ CACHE_KEY = "unifi_status"
 
 class UnifiService:
     def __init__(self):
-        self.settings = get_settings()
         self._cookies: Optional[dict] = None
 
-    async def _login(self, client: httpx.AsyncClient) -> bool:
+    async def _login(self, client: httpx.AsyncClient, settings) -> bool:
         """Authenticate with Unifi Controller."""
         try:
-            login_url = f"{self.settings.unifi_host}/api/auth/login"
+            login_url = f"{settings.unifi_host}/api/auth/login"
             response = await client.post(
                 login_url,
                 json={
-                    "username": self.settings.unifi_username,
-                    "password": self.settings.unifi_password,
+                    "username": settings.unifi_username,
+                    "password": settings.unifi_password,
                 },
             )
             if response.status_code == 200:
@@ -39,20 +39,22 @@ class UnifiService:
 
     async def get_status(self, use_cache: bool = True) -> UnifiStatus:
         """Get Unifi controller status."""
-        # Check if service is disabled
-        if not self.settings.unifi_enabled:
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("unifi"):
             return UnifiStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Service disabled",
                 last_updated=datetime.now(),
             )
 
+        settings = get_settings()
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:
                 return cached
 
-        if not self.settings.unifi_host:
+        if not settings.unifi_host:
             return UnifiStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Unifi not configured",
@@ -61,10 +63,10 @@ class UnifiService:
 
         try:
             async with httpx.AsyncClient(
-                verify=self.settings.unifi_verify_ssl,
+                verify=settings.unifi_verify_ssl,
                 timeout=10.0,
             ) as client:
-                if not await self._login(client):
+                if not await self._login(client, settings):
                     return UnifiStatus(
                         status=StatusLevel.ERROR,
                         error_message="Authentication failed",
@@ -72,7 +74,7 @@ class UnifiService:
                     )
 
                 # Get devices
-                devices_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/device"
+                devices_url = f"{settings.unifi_host}/proxy/network/api/s/{settings.unifi_site}/stat/device"
                 devices_response = await client.get(devices_url, cookies=self._cookies)
                 devices_data = devices_response.json().get("data", [])
 
@@ -97,7 +99,7 @@ class UnifiService:
                         devices_offline += 1
 
                 # Get clients
-                clients_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/sta"
+                clients_url = f"{settings.unifi_host}/proxy/network/api/s/{settings.unifi_site}/stat/sta"
                 clients_response = await client.get(clients_url, cookies=self._cookies)
                 clients_data = clients_response.json().get("data", [])
 
@@ -116,7 +118,7 @@ class UnifiService:
                         wireless_clients += 1
 
                 # Get dashboard stats for 24h data usage
-                dashboard_url = f"{self.settings.unifi_host}/proxy/network/api/s/{self.settings.unifi_site}/stat/dashboard"
+                dashboard_url = f"{settings.unifi_host}/proxy/network/api/s/{settings.unifi_site}/stat/dashboard"
                 dashboard_response = await client.get(dashboard_url, cookies=self._cookies)
                 dashboard_data = dashboard_response.json().get("data", [])
                 # Find the 24-hour WAN traffic stat

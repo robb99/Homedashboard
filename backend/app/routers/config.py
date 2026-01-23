@@ -7,6 +7,8 @@ import logging
 
 from app.config import get_settings
 from app.utils.env_manager import read_env, write_env
+from app.utils.runtime_config import get_runtime_config, save_runtime_config
+from app.services.cache import cache_service
 from app.models.schemas import (
     ConfigStatus,
     ServiceConfigStatus,
@@ -114,6 +116,7 @@ async def get_config_status():
 async def get_config():
     """Get current configuration with masked passwords."""
     settings = get_settings()
+    runtime_config = get_runtime_config()
 
     return ConfigResponse(
         # UniFi
@@ -122,7 +125,7 @@ async def get_config():
         unifi_password=_mask_value("unifi_password", settings.unifi_password),
         unifi_site=settings.unifi_site,
         unifi_verify_ssl=settings.unifi_verify_ssl,
-        unifi_enabled=settings.unifi_enabled,
+        unifi_enabled=runtime_config.get("unifi_enabled", True),
         # Proxmox
         proxmox_host=settings.proxmox_host,
         proxmox_user=settings.proxmox_user,
@@ -130,26 +133,26 @@ async def get_config():
         proxmox_token_value=_mask_value("proxmox_token_value", settings.proxmox_token_value),
         proxmox_node=settings.proxmox_node,
         proxmox_verify_ssl=settings.proxmox_verify_ssl,
-        proxmox_enabled=settings.proxmox_enabled,
+        proxmox_enabled=runtime_config.get("proxmox_enabled", True),
         # Plex
         plex_url=settings.plex_url,
         plex_token=_mask_value("plex_token", settings.plex_token),
-        plex_enabled=settings.plex_enabled,
+        plex_enabled=runtime_config.get("plex_enabled", True),
         # Docker
         docker_host=settings.docker_host or "",
-        docker_enabled=settings.docker_enabled,
+        docker_enabled=runtime_config.get("docker_enabled", True),
         # Calendar
         google_credentials_path=settings.google_credentials_path,
         google_calendar_ids=settings.google_calendar_ids,
-        calendar_enabled=settings.calendar_enabled,
+        calendar_enabled=runtime_config.get("calendar_enabled", True),
         # Weather
         weather_latitude=settings.weather_latitude,
         weather_longitude=settings.weather_longitude,
-        weather_enabled=settings.weather_enabled,
+        weather_enabled=runtime_config.get("weather_enabled", True),
         # News
         news_api_key=_mask_value("news_api_key", settings.news_api_key),
         news_country=settings.news_country,
-        news_enabled=settings.news_enabled,
+        news_enabled=runtime_config.get("news_enabled", True),
         # Application
         poll_interval=settings.poll_interval,
         cache_ttl=settings.cache_ttl,
@@ -159,9 +162,12 @@ async def get_config():
 
 @router.post("")
 async def save_config(config: ConfigUpdate):
-    """Save configuration to .env file."""
-    # Build updates dict, only including non-None values
+    """Save configuration to .env file and runtime config."""
+    # Build updates dict for .env, only including non-None values
     updates = {}
+
+    # Build runtime config updates for enabled flags
+    runtime_updates = {}
 
     # Helper to add if not None and not masked placeholder
     def add_if_set(key: str, value, env_key: str = None):
@@ -179,7 +185,7 @@ async def save_config(config: ConfigUpdate):
     if config.unifi_verify_ssl is not None:
         updates["UNIFI_VERIFY_SSL"] = str(config.unifi_verify_ssl).lower()
     if config.unifi_enabled is not None:
-        updates["UNIFI_ENABLED"] = str(config.unifi_enabled).lower()
+        runtime_updates["unifi_enabled"] = config.unifi_enabled
 
     # Proxmox
     add_if_set("proxmox_host", config.proxmox_host, "PROXMOX_HOST")
@@ -190,24 +196,24 @@ async def save_config(config: ConfigUpdate):
     if config.proxmox_verify_ssl is not None:
         updates["PROXMOX_VERIFY_SSL"] = str(config.proxmox_verify_ssl).lower()
     if config.proxmox_enabled is not None:
-        updates["PROXMOX_ENABLED"] = str(config.proxmox_enabled).lower()
+        runtime_updates["proxmox_enabled"] = config.proxmox_enabled
 
     # Plex
     add_if_set("plex_url", config.plex_url, "PLEX_URL")
     add_if_set("plex_token", config.plex_token, "PLEX_TOKEN")
     if config.plex_enabled is not None:
-        updates["PLEX_ENABLED"] = str(config.plex_enabled).lower()
+        runtime_updates["plex_enabled"] = config.plex_enabled
 
     # Docker
     add_if_set("docker_host", config.docker_host, "DOCKER_HOST")
     if config.docker_enabled is not None:
-        updates["DOCKER_ENABLED"] = str(config.docker_enabled).lower()
+        runtime_updates["docker_enabled"] = config.docker_enabled
 
     # Calendar
     add_if_set("google_credentials_path", config.google_credentials_path, "GOOGLE_CREDENTIALS_PATH")
     add_if_set("google_calendar_ids", config.google_calendar_ids, "GOOGLE_CALENDAR_IDS")
     if config.calendar_enabled is not None:
-        updates["CALENDAR_ENABLED"] = str(config.calendar_enabled).lower()
+        runtime_updates["calendar_enabled"] = config.calendar_enabled
 
     # Weather
     if config.weather_latitude is not None:
@@ -215,13 +221,13 @@ async def save_config(config: ConfigUpdate):
     if config.weather_longitude is not None:
         updates["WEATHER_LONGITUDE"] = str(config.weather_longitude)
     if config.weather_enabled is not None:
-        updates["WEATHER_ENABLED"] = str(config.weather_enabled).lower()
+        runtime_updates["weather_enabled"] = config.weather_enabled
 
     # News
     add_if_set("news_api_key", config.news_api_key, "NEWS_API_KEY")
     add_if_set("news_country", config.news_country, "NEWS_COUNTRY")
     if config.news_enabled is not None:
-        updates["NEWS_ENABLED"] = str(config.news_enabled).lower()
+        runtime_updates["news_enabled"] = config.news_enabled
 
     # Application
     if config.poll_interval is not None:
@@ -230,20 +236,34 @@ async def save_config(config: ConfigUpdate):
         updates["CACHE_TTL"] = str(config.cache_ttl)
     add_if_set("cors_origins", config.cors_origins, "CORS_ORIGINS")
 
-    if not updates:
+    # Save runtime config (enabled flags) - this always succeeds even if empty
+    if runtime_updates:
+        current_runtime = get_runtime_config()
+        current_runtime.update(runtime_updates)
+        runtime_success = save_runtime_config(current_runtime)
+        if runtime_success:
+            # Clear cache for affected services so changes take effect immediately
+            await cache_service.clear()
+        else:
+            logger.warning("Failed to save runtime config, but continuing with .env save")
+
+    if not updates and not runtime_updates:
         return {"status": "no_changes", "message": "No configuration values to update"}
 
-    # Write to .env
-    success = write_env(updates)
+    # Write credentials to .env (skip if no credential updates)
+    env_success = True
+    if updates:
+        env_success = write_env(updates)
 
-    if success:
+    if env_success:
         # Clear settings cache to reload
         get_settings.cache_clear()
 
+        total_updates = len(updates) + len(runtime_updates)
         return {
             "status": "success",
-            "message": f"Configuration saved ({len(updates)} values updated)",
-            "updated_keys": list(updates.keys()),
+            "message": f"Configuration saved ({total_updates} values updated)",
+            "updated_keys": list(updates.keys()) + list(runtime_updates.keys()),
         }
     else:
         raise HTTPException(status_code=500, detail="Failed to save configuration")
