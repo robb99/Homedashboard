@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from datetime import datetime
 
+from app.config import get_settings
 from app.models.schemas import (
     DashboardStatus,
     UnifiStatus,
@@ -10,6 +11,7 @@ from app.models.schemas import (
     CalendarStatus,
     WeatherStatus,
     NewsStatus,
+    StatusLevel,
 )
 from app.services import (
     unifi_service,
@@ -26,12 +28,34 @@ router = APIRouter(prefix="/api", tags=["dashboard"])
 
 @router.get("/dashboard", response_model=DashboardStatus)
 async def get_dashboard():
-    """Get complete dashboard status from all services."""
-    unifi = await unifi_service.get_status()
-    proxmox = await proxmox_service.get_status()
-    plex = await plex_service.get_status()
-    docker = await docker_service.get_status()
-    calendar = await calendar_service.get_status()
+    """Get complete dashboard status from all enabled services."""
+    settings = get_settings()
+
+    # Only fetch enabled services, return disabled status for others
+    if settings.unifi_enabled:
+        unifi = await unifi_service.get_status()
+    else:
+        unifi = UnifiStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+
+    if settings.proxmox_enabled:
+        proxmox = await proxmox_service.get_status()
+    else:
+        proxmox = ProxmoxStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+
+    if settings.plex_enabled:
+        plex = await plex_service.get_status()
+    else:
+        plex = PlexStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+
+    if settings.docker_enabled:
+        docker = await docker_service.get_status()
+    else:
+        docker = DockerStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+
+    if settings.calendar_enabled:
+        calendar = await calendar_service.get_status()
+    else:
+        calendar = CalendarStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
 
     return DashboardStatus(
         unifi=unifi,
@@ -87,17 +111,23 @@ async def get_news():
 
 @router.post("/refresh")
 async def refresh_all():
-    """Force refresh all cached data."""
+    """Force refresh all cached data for enabled services."""
     from app.services.cache import cache_service
 
+    settings = get_settings()
     await cache_service.clear()
 
-    # Fetch fresh data
-    await unifi_service.get_status(use_cache=False)
-    await proxmox_service.get_status(use_cache=False)
-    await plex_service.get_status(use_cache=False)
-    await docker_service.get_status(use_cache=False)
-    await calendar_service.get_status(use_cache=False)
+    # Fetch fresh data for enabled services only
+    if settings.unifi_enabled:
+        await unifi_service.get_status(use_cache=False)
+    if settings.proxmox_enabled:
+        await proxmox_service.get_status(use_cache=False)
+    if settings.plex_enabled:
+        await plex_service.get_status(use_cache=False)
+    if settings.docker_enabled:
+        await docker_service.get_status(use_cache=False)
+    if settings.calendar_enabled:
+        await calendar_service.get_status(use_cache=False)
 
     return {"status": "refreshed", "timestamp": datetime.now().isoformat()}
 

@@ -53,6 +53,20 @@ export function CalendarSetup({
             </span>
           </div>
         </div>
+        <div className="form-row single">
+          <div className="form-checkbox-group">
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              id="calendar_enabled"
+              checked={config.calendar_enabled !== false}
+              onChange={(e) => updateField('calendar_enabled', e.target.checked)}
+            />
+            <label className="form-checkbox-label" htmlFor="calendar_enabled">
+              Enable Calendar Widget
+            </label>
+          </div>
+        </div>
         <TestConnectionButton
           onTest={handleTest}
           testing={testing}

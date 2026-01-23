@@ -13,7 +13,7 @@ import { RefreshIndicator } from './RefreshIndicator';
 import '../styles/setup.css';
 
 export function Dashboard({ onOpenSetup }) {
-  const { data, loading, error, lastFetch } = useDashboard();
+  const { data, config, loading, error, lastFetch } = useDashboard();
 
   return (
     <div className="dashboard">
@@ -40,20 +40,20 @@ export function Dashboard({ onOpenSetup }) {
       )}
 
       <div className="dashboard-grid">
-        {data?.unifi?.status !== 'unknown' && (
+        {config?.unifi_enabled && data?.unifi?.status !== 'unknown' && (
           <UnifiCard data={data?.unifi} />
         )}
-        {data?.proxmox?.status !== 'unknown' && (
+        {config?.proxmox_enabled && data?.proxmox?.status !== 'unknown' && (
           <ProxmoxCard data={data?.proxmox} />
         )}
-        {data?.docker?.status !== 'unknown' && (
+        {config?.docker_enabled && data?.docker?.status !== 'unknown' && (
           <DockerCard data={data?.docker} />
         )}
-        {data?.plex?.status !== 'unknown' && (
+        {config?.plex_enabled && data?.plex?.status !== 'unknown' && (
           <PlexCard data={data?.plex} />
         )}
         <DailyByteCard />
-        {data?.calendar?.status !== 'unknown' && (
+        {config?.calendar_enabled && data?.calendar?.status !== 'unknown' && (
           <CalendarCard data={data?.calendar} />
         )}
       </div>

@@ -10,6 +10,7 @@ from app.models.schemas import (
     StatusLevel,
 )
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -18,22 +19,32 @@ CACHE_KEY = "proxmox_status"
 
 class ProxmoxService:
     def __init__(self):
-        self.settings = get_settings()
+        pass
 
-    def _get_auth_header(self) -> dict:
+    def _get_auth_header(self, settings) -> dict:
         """Get API token authentication header."""
         return {
-            "Authorization": f"PVEAPIToken={self.settings.proxmox_user}!{self.settings.proxmox_token_name}={self.settings.proxmox_token_value}"
+            "Authorization": f"PVEAPIToken={settings.proxmox_user}!{settings.proxmox_token_name}={settings.proxmox_token_value}"
         }
 
     async def get_status(self, use_cache: bool = True) -> ProxmoxStatus:
         """Get Proxmox cluster status."""
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("proxmox"):
+            return ProxmoxStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
+        settings = get_settings()
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:
                 return cached
 
-        if not self.settings.proxmox_host:
+        if not settings.proxmox_host:
             return ProxmoxStatus(
                 status=StatusLevel.UNKNOWN,
                 error_message="Proxmox not configured",
@@ -42,12 +53,12 @@ class ProxmoxService:
 
         try:
             async with httpx.AsyncClient(
-                verify=self.settings.proxmox_verify_ssl,
+                verify=settings.proxmox_verify_ssl,
                 timeout=10.0,
-                headers=self._get_auth_header(),
+                headers=self._get_auth_header(settings),
             ) as client:
-                base_url = f"{self.settings.proxmox_host}/api2/json"
-                node = self.settings.proxmox_node
+                base_url = f"{settings.proxmox_host}/api2/json"
+                node = settings.proxmox_node
 
                 # Get node status
                 node_response = await client.get(f"{base_url}/nodes/{node}/status")

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { logEvent } from '../utils/logger';
 
 const CACHE_KEY = 'dailyByteData';
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours in ms
 const ROTATION_INTERVAL = 60000; // 60 seconds
 const ITEMS_PER_TYPE = 5;
 
@@ -54,6 +55,12 @@ function getCachedData() {
     }
   } catch (e) {
     console.error('Error reading cache:', e);
+    logEvent({
+      level: 'warn',
+      source: 'DailyByte/cache',
+      message: 'Failed to read local cache',
+      details: e?.message || e,
+    });
   }
   return null;
 }
@@ -66,6 +73,12 @@ function setCachedData(data) {
     }));
   } catch (e) {
     console.error('Error writing cache:', e);
+    logEvent({
+      level: 'warn',
+      source: 'DailyByte/cache',
+      message: 'Failed to write local cache',
+      details: e?.message || e,
+    });
   }
 }
 
@@ -81,6 +94,12 @@ async function fetchQuotes() {
     }
   } catch (e) {
     console.error('Error fetching quotes:', e);
+    logEvent({
+      level: 'error',
+      source: 'DailyByte/quotes',
+      message: 'Failed to fetch quotes',
+      details: e?.message || e,
+    });
   }
   return FALLBACK_DATA.quotes;
 }
@@ -101,25 +120,42 @@ async function fetchJokes() {
     }
   } catch (e) {
     console.error('Error fetching jokes:', e);
+    logEvent({
+      level: 'error',
+      source: 'DailyByte/jokes',
+      message: 'Failed to fetch jokes',
+      details: e?.message || e,
+    });
   }
   return FALLBACK_DATA.jokes;
 }
 
-// Numbers API (HTTPS) - fetch multiple trivia facts
+function decodeTriviaValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  try {
+    return decodeURIComponent(value);
+  } catch (e) {
+    return value;
+  }
+}
+
+// Useless Facts API - fetch multiple trivia facts
 async function fetchTrivia() {
   try {
     const promises = [];
     for (let i = 0; i < ITEMS_PER_TYPE; i++) {
       promises.push(
-        fetch('https://numbersapi.com/random/trivia')
-          .then(res => res.text())
+        fetch('https://uselessfacts.jsph.pl/api/v2/facts/random')
+          .then(res => res.json())
+          .then(data => decodeTriviaValue(data.text))
           .catch(() => null)
       );
     }
     const results = await Promise.all(promises);
     const validResults = results.filter(r => r && r.length > 0);
     if (validResults.length >= 3) {
-      // Pad with fallbacks if needed
       while (validResults.length < ITEMS_PER_TYPE) {
         validResults.push(FALLBACK_DATA.trivia[validResults.length]);
       }
@@ -127,6 +163,12 @@ async function fetchTrivia() {
     }
   } catch (e) {
     console.error('Error fetching trivia:', e);
+    logEvent({
+      level: 'error',
+      source: 'DailyByte/trivia',
+      message: 'Failed to fetch trivia',
+      details: e?.message || e,
+    });
   }
   return FALLBACK_DATA.trivia;
 }
@@ -151,6 +193,12 @@ async function fetchHistory() {
     }
   } catch (e) {
     console.error('Error fetching history:', e);
+    logEvent({
+      level: 'error',
+      source: 'DailyByte/history',
+      message: 'Failed to fetch history',
+      details: e?.message || e,
+    });
   }
   return FALLBACK_DATA.history;
 }
@@ -186,6 +234,12 @@ async function fetchWords() {
     return words.length > 0 ? words : FALLBACK_DATA.words;
   } catch (e) {
     console.error('Error fetching words:', e);
+    logEvent({
+      level: 'error',
+      source: 'DailyByte/words',
+      message: 'Failed to fetch words',
+      details: e?.message || e,
+    });
   }
   return FALLBACK_DATA.words;
 }

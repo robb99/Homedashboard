@@ -4,8 +4,10 @@
 .env.production
 
 # Config files with secrets
+config/
 config/google_credentials.json
 config/*_token.json
+config/runtime_config.json
 
 # Python
 __pycache__/

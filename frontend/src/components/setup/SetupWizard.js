@@ -9,7 +9,7 @@ import { WeatherSetup } from './WeatherSetup';
 import { NewsSetup } from './NewsSetup';
 import '../../styles/setup.css';
 
-export function SetupWizard({ onComplete }) {
+export function SetupWizard({ onComplete, onOpenLogs }) {
   const {
     config,
     loading,
@@ -65,8 +65,17 @@ export function SetupWizard({ onComplete }) {
     <div className="setup-wizard">
       <div className="setup-container">
         <div className="setup-header">
-          <h1>HomeLab Dashboard Setup</h1>
-          <p>Configure your services below. You can test each connection before saving.</p>
+          <div className="setup-header-row">
+            <div>
+              <h1>HomeLab Dashboard Setup</h1>
+              <p>Configure your services below. You can test each connection before saving.</p>
+            </div>
+            {onOpenLogs && (
+              <button className="log-btn" onClick={onOpenLogs}>
+                View Logs
+              </button>
+            )}
+          </div>
         </div>
 
         {saveResult && (

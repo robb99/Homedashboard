@@ -57,6 +57,20 @@ export function PlexSetup({
             </span>
           </div>
         </div>
+        <div className="form-row single">
+          <div className="form-checkbox-group">
+            <input
+              type="checkbox"
+              className="form-checkbox"
+              id="plex_enabled"
+              checked={config.plex_enabled !== false}
+              onChange={(e) => updateField('plex_enabled', e.target.checked)}
+            />
+            <label className="form-checkbox-label" htmlFor="plex_enabled">
+              Enable Plex Monitoring
+            </label>
+          </div>
+        </div>
         <TestConnectionButton
           onTest={handleTest}
           testing={testing}

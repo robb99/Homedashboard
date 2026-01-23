@@ -1,16 +1,37 @@
 # Summary of Fixes & Current Status for HomeDashboard
 
+> This document is a historical incident log. Entries reflect the state at the time of each update, not necessarily the current codebase.
+
+## How to Add New Entries
+- **Date:** Use a clear date in `YYYY-MM-DD` format.
+- **Branch:** Note the GitHub branch name (e.g., `main`, `feature/setup-wizard`).
+- **Summary:** Briefly describe the change made.
+- **What Worked:** List successful outcomes or verifications.
+- **What Failed:** List failures, regressions, or remaining issues.
+
 This document summarizes the major troubleshooting steps and fixes applied to the HomeDashboard project.
 
 ## Summary of Fixes
 
 ### 1. Initial Goal: Display Plex Posters & Season Info
+**Date:** 2026-01-18
+**Branch:** main
+**Summary:** Initial Goal: Display Plex Posters & Season Info
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Problem:** The dashboard showed icons instead of posters for Plex items, and season titles were incorrect.
 - **Fix:**
     - The backend was updated to construct full image URLs for Plex items, including a fallback for season posters (`backend/app/services/plex.py`).
     - The frontend was updated to display these images and to correctly show the show's title for seasons (`frontend/src/components/PlexCard.js`). **(FIXED)**
 
 ### 2. Major Problem: `git` History Conflicts & Deployment Failures
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** Major Problem: `git` History Conflicts & Deployment Failures
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Problem:** We were unable to push changes to GitHub due to "divergent histories" and other `git` errors.
 - **Cause:** The local working copy and the server's copy had separate, conflicting `git` histories that were different from your GitHub repository.
 - **Resolution:**
@@ -19,6 +40,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - We then reset your local machine's project by deleting the old folder and re-cloning the clean version from GitHub to establish a standard workflow. **(FIXED)**
 
 ### 3. Major Problem: Frontend Not Displaying ("NetworkError")
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** Major Problem: Frontend Not Displaying ("NetworkError")
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Problem:** The dashboard showed a "Failed to connect to API" error, caused by the frontend trying to contact `http://localhost:8000`.
 - **Cause:**
     1.  The `REACT_APP_API_URL` environment variable was not being correctly set when building the frontend Docker image.
@@ -28,6 +55,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - We permanently fixed the build process by hardcoding `REACT_APP_API_URL=/api` into the `docker-compose.yml` file. **(FIXED)**
 
 ### 4. Problem: Unhealthy Backend Services
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** Problem: Unhealthy Backend Services
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Problem:** The Unifi and Proxmox cards were showing errors.
 - **Cause:**
     1.  The `.env` file had an incorrect IP address for `PROXMOX_HOST`.
@@ -37,6 +70,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - We updated `unifi.py` with the correct API paths for Unifi authentication. **(FIXED)**
 
 ### 5. New Feature: Unifi Card Customization
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** New Feature: Unifi Card Customization
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Feature:** Replaced "Devices Offline" with "WAN Latency" and "Total Devices" with "Wireless Clients" (was "Devices Online" -> "Wireless Clients" and "Total Devices" -> "24h Data Usage").
 - **Resolution:**
     - `backend/app/models/schemas.py` updated with new fields.
@@ -44,11 +83,23 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/components/UnifiCard.js` updated to display new metrics. **(FIXED)**
 
 ### 6. Problem: Google Calendar (Previously: "Only one calendar event showing")
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** Problem: Google Calendar (Previously: "Only one calendar event showing")
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Problem:** Only one calendar event was being displayed, even though there were many on the calendar.
 - **Fix:**
     - Corrected syntax for timezone conversion in `backend/app/services/calendar.py` to ensure `.astimezone(timezone.utc)` is called on a `datetime` object and not a string. **(FIXED)**
 
 ### 7. New Feature: 1080p Viewport-Fit Layout
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** New Feature: 1080p Viewport-Fit Layout
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Restructure dashboard to fit all cards on a 1920x1080 screen without vertical scrolling.
 - **Changes:**
     - Dashboard now uses CSS flexbox with `height: 100vh` and `overflow: hidden` for viewport fit.
@@ -59,6 +110,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - Responsive breakpoints for portrait/smaller screens allow vertical scrolling. **(IMPLEMENTED)**
 
 ### 8. New Feature: Header Widgets (Weather, News, DateTime)
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** New Feature: Header Widgets (Weather, News, DateTime)
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Add weather forecast, news headlines, and current time to the header area.
 - **Changes:**
     - **WeatherWidget:** Displays today's and tomorrow's temperature using Open-Meteo API (no API key required).
@@ -87,16 +144,34 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `backend/app/config.py` - Added weather/news settings **(IMPLEMENTED)**
 
 ### 9. UI Cleanup: Remove Card Timestamps
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** UI Cleanup: Remove Card Timestamps
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Remove "Updated X ago" footer from all service cards.
 - **Changes:**
     - Removed timestamp footer and `formatRelativeTime` import from `StatusCard.js`.
     - Removed `lastUpdated` prop from `UnifiCard.js`, `ProxmoxCard.js`, `DockerCard.js`, `PlexCard.js`. **(IMPLEMENTED)**
 
 ### 10. Enhancement: Increase Plex Item Count
+**Date:** 2026-01-19
+**Branch:** main
+**Summary:** Enhancement: Increase Plex Item Count
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Show more Plex items in the card.
 - **Change:** Increased from 5 to 10 items displayed in `PlexCard.js`. **(IMPLEMENTED)**
 
 ### 11. New Feature: "A Daily Byte" Card
+**Date:** 2026-01-20
+**Branch:** main
+**Summary:** New Feature: "A Daily Byte" Card
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Add a new card displaying daily inspirational/fun content - Quote of the Day, Trivia, and Joke.
 - **Changes:**
     - **DailyByteCard Component:** New frontend-only card that fetches data from free public APIs.
@@ -114,6 +189,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/styles/index.css` - Added styles for daily byte sections and updated grid layout **(IMPLEMENTED)**
 
 ### 12. Bugfix: Unifi Data Usage and Daily Byte Icon
+**Date:** 2026-01-20
+**Branch:** main
+**Summary:** Bugfix: Unifi Data Usage and Daily Byte Icon
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Goal:** Fix a validation error in the Unifi service and improve the Daily Byte card's icon.
 - **Changes:**
     - **Unifi Pydantic Validation Error:** The `data_usage_24h` field in the `UnifiStatus` model was changed from `int` to `float` to handle decimal values from the Unifi API.
@@ -123,6 +204,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/components/DailyByteCard.js` - Changed card icon. **(IMPLEMENTED)**
 
 ### 13. Enhancement: Daily Byte Expanded 5-Item Display with 60s Rotation
+**Date:** 2026-01-20
+**Branch:** feature/daily-byte-enhancement
+**Summary:** Enhancement: Daily Byte Expanded 5-Item Display with 60s Rotation
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Branch:** `feature/daily-byte-enhancement`
 - **Goal:** Expand the Daily Byte card from 3 to 5 content types with automatic rotation.
 - **Problem:** Original implementation had stale content due to single fetch on mount + 24-hour cache.
@@ -132,8 +219,8 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - **60-Second Rotation:** Each section automatically advances to next item every 60 seconds
     - **Full Variety Cycle:** 5 minutes before content repeats
 - **APIs Used:**
-    - **Quotes:** Quotable API (`https://api.quotable.io/quotes/random?limit=5`) - free, no auth
-    - **Trivia:** Numbers API HTTPS (`https://numbersapi.com/random/trivia`) - free
+    - **Quotes:** ZenQuotes API (`https://zenquotes.io/api/quotes`) - free, no auth
+    - **Trivia:** Useless Facts API (`https://uselessfacts.jsph.pl/api/v2/facts/random`) - free
     - **Jokes:** JokeAPI bulk (`https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?safe-mode&amount=5`) - free
     - **History:** Wikimedia Feed (`https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/{month}/{day}`) - free
     - **Words:** Random Word API + Dictionary API - free
@@ -143,6 +230,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/styles/index.css` - Added styles for history and word sections, adjusted spacing **(IMPLEMENTED)**
 
 ### 14. Enhancement: Plex Card with Library Counts and Active Streams
+**Date:** 2026-01-20
+**Branch:** feature/daily-byte-enhancement
+**Summary:** Enhancement: Plex Card with Library Counts and Active Streams
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Branch:** `feature/daily-byte-enhancement`
 - **Goal:** Enhance the Plex card to show total movie/show counts and active streaming sessions.
 - **Changes:**
@@ -165,6 +258,12 @@ This document summarizes the major troubleshooting steps and fixes applied to th
     - `frontend/src/styles/index.css` - Added styles for plex-now-playing and plex-session **(IMPLEMENTED)**
 
 ### 15. New Feature: Web-Based Setup Wizard
+**Date:** 2026-01-21
+**Branch:** feature/setup-wizard
+**Summary:** New Feature: Web-Based Setup Wizard
+**What Worked:** See details below.
+**What Failed:** None noted.
+
 - **Branch:** `feature/setup-wizard`
 - **Goal:** Allow users to configure service credentials through a UI instead of manually editing `.env` files.
 - **Changes:**
@@ -205,6 +304,33 @@ This document summarizes the major troubleshooting steps and fixes applied to th
   - News: Test connection works with valid API key
   - Calendar: Test connection verifies credentials file exists **(IMPLEMENTED)**
 
+### 16. Maintenance: Daily Byte Content Refresh and Trivia Source Update
+**Date:** 2026-01-23
+**Branch:** main
+**Summary:** Reduce Daily Byte repetition and replace trivia API source.
+**What Worked:** Trivia now uses Useless Facts API; cache duration reduced to 6 hours to refresh content more often.
+**What Failed:** Numbers API failed intermittently in this environment; Dictionary API still returns 404 for some random words.
+
+- **Changes:**
+  - **Cache Duration:** Reduced Daily Byte cache from 24 hours to 6 hours for more frequent refresh.
+  - **Trivia Source:** Switched from Numbers API to Useless Facts API.
+  - **Notes:** Open Trivia DB was tested but not used.
+
+### 17. Feature: Running Log Viewer with Backend Log API
+**Date:** 2026-01-23
+**Branch:** main
+**Summary:** Add a settings-accessible running log viewer that aggregates frontend and backend errors.
+**What Worked:** Log viewer shows client errors in real time and can fetch/clear backend logs via `/api/logs`.
+**What Failed:** None noted.
+
+- **Changes:**
+  - **Frontend Logging:** Added client-side log buffer with storage, subscriptions, and global error capture.
+  - **Log Viewer:** New settings-accessible page to view, refresh, and clear logs.
+  - **Backend Logging:** Added in-memory log buffer and API endpoints.
+  - **Endpoints:** `GET /api/logs`, `POST /api/logs/clear`
+  - **Files Added:** `frontend/src/utils/logger.js`, `frontend/src/components/setup/LogViewer.js`, `backend/app/utils/log_buffer.py`, `backend/app/routers/logs.py`
+  - **Files Modified:** `frontend/src/App.js`, `frontend/src/components/setup/SetupWizard.js`, `frontend/src/styles/setup.css`, `frontend/src/hooks/useDashboard.js`, `frontend/src/hooks/useSetup.js`, `frontend/src/components/DailyByteCard.js`, `backend/app/main.py`, `backend/app/models/schemas.py`
+
 ---
 
 ## Future Priority Improvements
@@ -212,14 +338,111 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 | # | Feature | Description | Status |
 |---|---------|-------------|--------|
 | 1 | Web-based Setup Wizard | Configure via UI instead of .env | **Implemented** |
-| 2 | Service Toggles | Enable/disable services from settings panel | Planned |
+| 2 | Service Toggles | Enable/disable services from settings panel | **In Progress** (see below) |
 | 3 | Theme Support | Light/dark mode, custom accent colors | Planned |
 | 4 | Mobile Responsive | Better phone/tablet layout | Planned |
 | 5 | Docker Hub Images | Pre-built images for easy deployment | Planned |
 
 ---
 
-## Current Status (As of Jan 21, 2026)
+## Service Toggles Bug Fix (Jan 22, 2026)
+**Date:** 2026-01-22
+**Branch:** main
+**Summary:** Diagnose and resolve service toggle behavior under Docker.
+**What Worked:** Runtime config file approach (see details below).
+**What Failed:** Initial env-var based approach in Docker (see details below).
+
+
+### First Attempt - Changes Made
+
+**Backend Services Modified:**
+All services updated to call `get_settings()` fresh instead of caching at startup:
+- `backend/app/services/unifi.py` - Removed `self.settings`, calls `get_settings()` in `get_status()`
+- `backend/app/services/proxmox.py` - Same pattern
+- `backend/app/services/plex.py` - Same pattern
+- `backend/app/services/docker_service.py` - Same pattern
+- `backend/app/services/calendar.py` - Same pattern
+- `backend/app/services/news.py` - Same pattern
+- `backend/app/services/weather.py` - Same pattern
+
+**Frontend Modified:**
+- `frontend/src/hooks/useDashboard.js` - Added `fetchConfig()` to get enabled flags
+- `frontend/src/components/Dashboard.js` - Cards check `config?.{service}_enabled`
+
+### Why It Still Doesn't Work
+
+**Root Cause: Docker Environment Architecture**
+
+The approach is fundamentally broken in Docker because:
+
+1. **Environment Variables Are Set at Startup**
+   - `docker-compose.yml` passes env vars using `${VAR:-default}` syntax
+   - These are read from host's `.env` ONCE at container startup
+   - After container starts, env vars are fixed until restart
+
+2. **env_manager.py Writes to Wrong Location**
+   - Path: `Path(__file__).parent.parent.parent.parent / ".env"`
+   - In Docker: `__file__` = `/app/app/utils/env_manager.py`
+   - Result: writes to `/.env` (root filesystem) - WRONG!
+
+3. **Settings Can't Pick Up Changes**
+   - `pydantic-settings` reads environment variables first
+   - Even if `.env` path was correct, env vars are already set
+   - `get_settings.cache_clear()` only clears Python cache, not env vars
+
+4. **Missing ENV Variables in docker-compose.yml**
+   ```yaml
+   # These are NOT passed to the container:
+   - UNIFI_ENABLED=${UNIFI_ENABLED:-true}
+   - PROXMOX_ENABLED=${PROXMOX_ENABLED:-true}
+   - PLEX_ENABLED=${PLEX_ENABLED:-true}
+   - DOCKER_ENABLED=${DOCKER_ENABLED:-true}
+   - CALENDAR_ENABLED=${CALENDAR_ENABLED:-true}
+   ```
+
+### Revised Plan: Use Runtime Config File - IMPLEMENTED
+
+Instead of modifying `.env` (which doesn't work in Docker), use a JSON config file in a mounted volume.
+
+**Implementation Completed:**
+
+| Step | File | Status |
+|------|------|--------|
+| 1 | `backend/app/utils/runtime_config.py` | DONE - Read/write `/app/config/runtime_config.json` |
+| 2 | `backend/app/routers/config.py` | DONE - Reads/saves enabled flags from runtime config |
+| 3 | `backend/app/services/unifi.py` | DONE - Uses `get_service_enabled("unifi")` |
+| 4 | `backend/app/services/proxmox.py` | DONE - Uses `get_service_enabled("proxmox")` |
+| 5 | `backend/app/services/plex.py` | DONE - Uses `get_service_enabled("plex")` |
+| 6 | `backend/app/services/docker_service.py` | DONE - Uses `get_service_enabled("docker")` |
+| 7 | `backend/app/services/calendar.py` | DONE - Uses `get_service_enabled("calendar")` |
+| 8 | `backend/app/services/weather.py` | DONE - Uses `get_service_enabled("weather")` |
+| 9 | `backend/app/services/news.py` | DONE - Uses `get_service_enabled("news")` |
+| 10 | `docker-compose.yml` | DONE - Mount config as `:rw` |
+| 11 | Cache cleared on save | DONE - Clears service cache when enabled flags change |
+
+**Expected Behavior After Fix:**
+1. User unchecks "Enable UniFi Monitoring" and clicks Save
+2. Backend writes `{"unifi_enabled": false}` to `/app/config/runtime_config.json`
+3. Cache is cleared immediately
+4. Dashboard fetches config, sees `unifi_enabled: false`
+5. UniFi card hidden immediately (no restart needed)
+6. Settings persist on refresh and container restart (mounted volume)
+
+**To Test:**
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+---
+
+## Current Status (As of Jan 22, 2026)
+**Date:** 2026-01-22
+**Branch:** main
+**Summary:** Snapshot of working features and remaining issues.
+**What Worked:** See Working Features below.
+**What Failed:** See Remaining Issues below.
+
 
 ### Working Features
 - **Setup Wizard:** Web-based configuration UI with test connection buttons and automatic first-run detection.

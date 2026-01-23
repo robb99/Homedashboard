@@ -5,6 +5,7 @@ import logging
 from app.config import get_settings
 from app.models.schemas import DockerStatus, DockerContainer, StatusLevel
 from app.services.cache import cache_service
+from app.utils.runtime_config import get_service_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -13,16 +14,16 @@ CACHE_KEY = "docker_status"
 
 class DockerService:
     def __init__(self):
-        self.settings = get_settings()
         self._client = None
 
     def _get_client(self):
         """Get Docker client, connecting to remote or local socket."""
+        settings = get_settings()
         if self._client is None:
             try:
-                if self.settings.docker_host:
+                if settings.docker_host:
                     self._client = docker.DockerClient(
-                        base_url=self.settings.docker_host
+                        base_url=settings.docker_host
                     )
                 else:
                     self._client = docker.from_env()
@@ -33,6 +34,14 @@ class DockerService:
 
     async def get_status(self, use_cache: bool = True) -> DockerStatus:
         """Get Docker container status."""
+        # Check if service is disabled (from runtime config)
+        if not get_service_enabled("docker"):
+            return DockerStatus(
+                status=StatusLevel.UNKNOWN,
+                error_message="Service disabled",
+                last_updated=datetime.now(),
+            )
+
         if use_cache:
             cached = await cache_service.get(CACHE_KEY)
             if cached:

@@ -219,6 +219,7 @@ class ConfigUpdate(BaseModel):
     unifi_password: Optional[str] = None
     unifi_site: Optional[str] = None
     unifi_verify_ssl: Optional[bool] = None
+    unifi_enabled: Optional[bool] = None
 
     # Proxmox
     proxmox_host: Optional[str] = None
@@ -227,17 +228,21 @@ class ConfigUpdate(BaseModel):
     proxmox_token_value: Optional[str] = None
     proxmox_node: Optional[str] = None
     proxmox_verify_ssl: Optional[bool] = None
+    proxmox_enabled: Optional[bool] = None
 
     # Plex
     plex_url: Optional[str] = None
     plex_token: Optional[str] = None
+    plex_enabled: Optional[bool] = None
 
     # Docker
     docker_host: Optional[str] = None
+    docker_enabled: Optional[bool] = None
 
     # Google Calendar
     google_credentials_path: Optional[str] = None
     google_calendar_ids: Optional[str] = None
+    calendar_enabled: Optional[bool] = None
 
     # Weather
     weather_latitude: Optional[float] = None
@@ -263,6 +268,7 @@ class ConfigResponse(BaseModel):
     unifi_password: str = ""  # Will be masked
     unifi_site: str = "default"
     unifi_verify_ssl: bool = False
+    unifi_enabled: bool = True
 
     # Proxmox
     proxmox_host: str = ""
@@ -271,17 +277,21 @@ class ConfigResponse(BaseModel):
     proxmox_token_value: str = ""  # Will be masked
     proxmox_node: str = "pve"
     proxmox_verify_ssl: bool = False
+    proxmox_enabled: bool = True
 
     # Plex
     plex_url: str = ""
     plex_token: str = ""  # Will be masked
+    plex_enabled: bool = True
 
     # Docker
     docker_host: str = ""
+    docker_enabled: bool = True
 
     # Google Calendar
     google_credentials_path: str = ""
     google_calendar_ids: str = "primary"
+    calendar_enabled: bool = True
 
     # Weather
     weather_latitude: float = 0.0
@@ -340,3 +350,19 @@ class TestConnectionResult(BaseModel):
     success: bool
     message: str
     details: Optional[str] = None
+
+
+# =============================================================================
+# LOGGING MODELS
+# =============================================================================
+class LogEntry(BaseModel):
+    id: str
+    timestamp: str
+    level: str
+    logger: str
+    message: str
+    details: Optional[str] = None
+
+
+class LogsResponse(BaseModel):
+    entries: List[LogEntry]
