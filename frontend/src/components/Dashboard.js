@@ -50,7 +50,7 @@ export function Dashboard({ onOpenSetup }) {
         {config?.docker_enabled && data?.docker?.status !== 'unknown' && (
           <DockerCard data={data?.docker} />
         )}
-        {config?.unraid_enabled && data?.unraid?.status !== 'unknown' && (
+        {config?.unraid_enabled && data?.unraid && (
           <UnraidCard data={data?.unraid} />
         )}
         {config?.plex_enabled && data?.plex?.status !== 'unknown' && (

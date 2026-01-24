@@ -35,7 +35,13 @@ function ArraySection({ array }) {
   // Determine parity display class - valid/syncing are ok, invalid is error
   const parityClass = parityLower === 'valid' ? 'valid' :
                       parityLower === 'syncing' ? 'syncing' :
+                      parityLower === 'checking' ? 'syncing' :
                       parityLower === 'invalid' ? 'invalid' : 'valid';
+
+  // Check for disk health issues
+  const diskWithErrors = array.disks?.filter(d =>
+    d.num_errors > 0 || d.smart_status === 'failed'
+  ).length || 0;
 
   return (
     <div className="unraid-section">
@@ -48,16 +54,24 @@ function ArraySection({ array }) {
           {array.parity_status && (
             <span className={`parity-status ${parityClass}`}>
               Parity: {array.parity_status}
-              {array.parity_progress !== null && parityLower === 'syncing' &&
+              {array.parity_progress !== null && (parityLower === 'syncing' || parityLower === 'checking') &&
                 ` (${array.parity_progress.toFixed(1)}%)`
               }
+              {array.parity_errors > 0 && (
+                <span className="parity-errors"> ({array.parity_errors} errors)</span>
+              )}
             </span>
           )}
         </div>
         <div className="array-stats">
           <div className="array-stat">
             <span className="stat-label">Disks</span>
-            <span className="stat-value">{array.disks?.length || 0}</span>
+            <span className="stat-value">
+              {array.disks?.length || 0}
+              {diskWithErrors > 0 && (
+                <span className="disk-warning" title={`${diskWithErrors} disk(s) with errors`}> ⚠</span>
+              )}
+            </span>
           </div>
           <div className="array-stat">
             <span className="stat-label">Free</span>
@@ -73,37 +87,56 @@ function ArraySection({ array }) {
   );
 }
 
+function getTempClass(temp, type = 'disk') {
+  // Temperature thresholds: disk (50/60), CPU (80/95)
+  const warnThreshold = type === 'cpu' ? 80 : 50;
+  const critThreshold = type === 'cpu' ? 95 : 60;
+
+  if (temp >= critThreshold) return 'temp-critical';
+  if (temp >= warnThreshold) return 'temp-warning';
+  return 'temp-normal';
+}
+
 function SystemSection({ system }) {
   if (!system) return null;
 
-  // Check if we have CPU/RAM data (may not be available via GraphQL)
-  const hasCpuRam = system.cpu_usage > 0 || system.memory_percent > 0;
   const hasUptime = system.uptime > 0;
+  const hasCpuTemp = system.cpu_temp !== null && system.cpu_temp !== undefined;
 
   return (
     <div className="unraid-section">
       <div className="section-label">System Info</div>
       <div className="system-info">
-        {hasCpuRam && (
-          <div className="resource-bars">
-            <ResourceBar label="CPU" value={system.cpu_usage} />
-            <ResourceBar label="RAM" value={system.memory_percent} />
+        {/* Server header with uptime (Proxmox style) */}
+        <div className="node-name">
+          UNRAID{hasUptime && ` - ${formatUptime(system.uptime)}`}
+        </div>
+
+        {/* CPU/RAM bars (always show, even if 0%) */}
+        <div className="resource-bars">
+          <ResourceBar label="CPU" value={system.cpu_usage || 0} />
+          <ResourceBar label="Memory" value={system.memory_percent || 0} />
+        </div>
+
+        {/* Additional stats row */}
+        {(hasCpuTemp || system.version) && (
+          <div className="system-stats">
+            {hasCpuTemp && (
+              <div className="system-stat">
+                <span className="stat-label">CPU Temp</span>
+                <span className={`stat-value ${getTempClass(system.cpu_temp, 'cpu')}`}>
+                  {system.cpu_temp}°C
+                </span>
+              </div>
+            )}
+            {system.version && (
+              <div className="system-stat">
+                <span className="stat-label">Version</span>
+                <span className="stat-value">{system.version}</span>
+              </div>
+            )}
           </div>
         )}
-        <div className="system-stats">
-          {hasUptime && (
-            <div className="system-stat">
-              <span className="stat-label">Uptime</span>
-              <span className="stat-value">{formatUptime(system.uptime)}</span>
-            </div>
-          )}
-          {system.version && (
-            <div className="system-stat">
-              <span className="stat-label">Version</span>
-              <span className="stat-value">{system.version}</span>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

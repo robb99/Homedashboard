@@ -204,12 +204,15 @@ class UnraidDisk(BaseModel):
     free: int = 0
     status: str = "unknown"  # started, stopped, standby, fault
     temp: Optional[int] = None
+    smart_status: str = "unknown"  # passed, failed, unknown
+    num_errors: int = 0  # SMART error count
 
 
 class UnraidArray(BaseModel):
     status: str = "unknown"  # started, stopped
-    parity_status: str = "unknown"  # valid, invalid, syncing
+    parity_status: str = "unknown"  # valid, invalid, syncing, checking
     parity_progress: Optional[float] = None
+    parity_errors: int = 0  # Parity error count
     total_size: int = 0
     used_size: int = 0
     free_size: int = 0
@@ -232,6 +235,7 @@ class UnraidVM(BaseModel):
 
 class UnraidSystem(BaseModel):
     cpu_usage: float = 0.0
+    cpu_temp: Optional[int] = None  # CPU temperature in Celsius
     memory_total: int = 0
     memory_used: int = 0
     memory_percent: float = 0.0

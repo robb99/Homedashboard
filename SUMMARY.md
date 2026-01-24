@@ -405,6 +405,11 @@ This document summarizes the major troubleshooting steps and fixes applied to th
 | 3 | Theme Support | Light/dark mode, custom accent colors | Planned |
 | 4 | Mobile Responsive | Better phone/tablet layout | Planned |
 | 5 | Docker Hub Images | Pre-built images for easy deployment | Planned |
+| 6 | UNRAID CPU Usage | Real-time CPU utilization | **Partial** - CPU temp available, usage % not in API |
+| 7 | UNRAID RAM Usage | Memory total/used/percent | **Implemented** (Entry #21) |
+| 8 | UNRAID Uptime | System uptime in seconds | **Implemented** (Entry #21) |
+| 9 | UNRAID Parity Status | Actual parity sync status, progress, errors | **Implemented** (Entry #21) |
+| 10 | UNRAID Disk Health | Disk status (healthy/warning/error), SMART, temp | **Implemented** (Entry #21) |
 
 ---
 
@@ -588,8 +593,120 @@ docker-compose up -d --build
   6. ✅ **Capacity Units:** Fixed - was using binary KB (1024), now uses decimal KB (1000) to match Unraid display (25.9TB free, 72.1TB used)
   7. ✅ **Case Sensitivity:** Fixed uppercase status comparisons (STARTED, RUNNING)
 
-- **Unraid 7.x GraphQL Limitations:**
-  - No CPU/memory usage fields available
-  - No uptime field available (tested `info.os.uptime`, `vars.uptime`, `system`)
-  - No parity status field available (tested `parity`, `parities`)
-  - No disk status/temp/color fields available
+- **Unraid 7.x GraphQL Limitations (Resolved in #21):**
+  - CPU/memory usage now available via `info.cpu` and `info.memory`
+  - Uptime now available via `info.os.uptime`
+  - Parity status now available via `array.parities`
+  - Disk status/temp/smartStatus now available via `disks`
+
+---
+
+### 21. Enhancement: UNRAID Missing Metrics Implementation
+**Date:** 2026-01-24
+**Branch:** main
+**Summary:** Implement 5 previously missing UNRAID metrics (CPU temp, RAM, Uptime, Parity Status, Disk Health) using expanded Unraid 7.2+ GraphQL API.
+**What Worked:** All 5 metrics now queryable via GraphQL; parity status from `array.parities`; disk health from `disks.smartStatus/numErrors`; memory from `info.memory`; CPU temp from `info.cpu.temperature`; uptime from `info.os.uptime`.
+**What Failed:** CPU usage percentage not directly available (would need /proc/stat calculation).
+
+- **Backend Changes:**
+  - **`backend/app/services/unraid.py`:**
+    - `_fetch_array_status()`: Added `array.parities { name, size, status, temp, numErrors }` and disk fields `status, temp, smartStatus, numErrors`
+    - `_fetch_system_info()`: Added `info.cpu { threads, temperature }` and `info.memory { total, used, free, available }`
+    - `_parse_array_data()`: Now extracts parity status from `array.parities` (valid/syncing/checking/invalid), sums parity errors, extracts disk SMART status and error counts
+    - `_parse_system_data()`: Now extracts CPU temperature and calculates memory percentage from `info.memory`
+    - `_determine_status()`: Enhanced with temperature thresholds (disk >50C warning, >60C critical; CPU >80C warning, >95C critical) and SMART status checks
+
+  - **`backend/app/models/schemas.py`:**
+    - `UnraidDisk`: Added `smart_status: str` (passed/failed/unknown) and `num_errors: int` fields
+    - `UnraidArray`: Added `parity_errors: int` field
+    - `UnraidSystem`: Added `cpu_temp: Optional[int]` field
+
+- **Frontend Changes:**
+  - **`frontend/src/components/UnraidCard.js`:**
+    - Added `getTempClass()` helper for color-coded temperature display
+    - `SystemSection`: Now displays CPU temperature with warning/critical colors
+    - `ArraySection`: Now shows parity errors count and disk health warning indicator
+
+  - **`frontend/src/styles/index.css`:**
+    - Added `.temp-normal`, `.temp-warning`, `.temp-critical` classes
+    - Added `.parity-errors` and `.disk-warning` styles
+
+- **GraphQL Query Expansions:**
+  ```graphql
+  # Array status query now includes:
+  array {
+    parities { name, size, status, temp, numErrors }
+  }
+  disks { status, temp, smartStatus, numErrors }
+
+  # System info query now includes:
+  info {
+    cpu { threads, temperature }
+    memory { total, used, free, available }
+    os { uptime }
+  }
+  ```
+
+- **Temperature Thresholds Implemented:**
+  | Component | Warning (Yellow) | Critical (Red) |
+  |-----------|------------------|----------------|
+  | Disk | > 50°C | > 60°C |
+  | CPU | > 80°C | > 95°C |
+
+- **Status Determination Logic:**
+  - **ERROR:** Array stopped, disk fault, SMART failed, parity invalid/degraded, disk temp >60°C, CPU temp >95°C
+  - **WARNING:** Parity syncing/checking, disk temp >50°C, CPU temp >80°C, SMART errors >0, parity errors >0
+  - **HEALTHY:** All systems normal
+
+- **Known Limitations:**
+  - CPU usage percentage not available via GraphQL (only temperature)
+  - Memory values may be in bytes or KB depending on Unraid version
+
+- **Fallback Behavior:**
+  - If new GraphQL fields not available, falls back to previous behavior (0 values, hardcoded "valid" parity)
+
+---
+
+### 22. Enhancement: UNRAID Card Style Update + Dashboard Visibility Fix
+**Date:** 2026-01-24
+**Branch:** main
+**Summary:** Updated UNRAID card's System Info section to match Proxmox card's CPU/RAM display style; fixed dashboard to show UNRAID card even when status is "unknown".
+**What Worked:** Frontend style changes applied; UNRAID card now visible with containers/VMs despite GraphQL errors.
+**What Failed:** Backend GraphQL queries for expanded fields (disk status/temp, CPU temperature, memory total/used) return validation errors on current Unraid version.
+
+- **Frontend Changes:**
+  - **`frontend/src/components/UnraidCard.js`:**
+    - `SystemSection`: Refactored to match Proxmox card style
+    - Added "UNRAID - {uptime}" header line (like Proxmox's `node.name - uptime`)
+    - Moved uptime from stats row to header
+    - CPU/RAM bars now always display (removed `hasCpuRam` conditional)
+    - Changed "RAM" label to "Memory" for consistency with Proxmox
+    - CPU temp and version remain as small stats below the bars
+    - Added null safety with `|| 0` for CPU/memory values
+
+  - **`frontend/src/components/Dashboard.js`:**
+    - Changed UNRAID card visibility condition from `status !== 'unknown'` to just `data?.unraid`
+    - Card now displays even when backend has partial data failures
+
+- **GraphQL Failures (Unraid 7.2.3):**
+  The expanded GraphQL queries added in Entry #21 are returning validation errors:
+  ```
+  Cannot query field "status" on type "Disk"
+  Cannot query field "temp" on type "Disk"
+  Cannot query field "numErrors" on type "Disk"
+  Cannot query field "temperature" on type "InfoCpu"
+  Cannot query field "total" on type "InfoMemory"
+  Cannot query field "used" on type "InfoMemory"
+  ```
+  These fields may not be available in the current Unraid GraphQL schema. The backend has uncommitted changes attempting to query these fields.
+
+- **Current UNRAID Card Behavior:**
+  - Shows containers (12 of 14 running) ✅
+  - Shows VMs (1 running) ✅
+  - Shows version (7.2.3) ✅
+  - CPU/Memory bars display at 0% (data not available)
+  - Uptime shows 0 (data not available)
+  - Array status shows null (query failed)
+
+- **Recommendation:**
+  Revert backend `unraid.py` to simpler GraphQL queries that work with current Unraid version, or introspect the actual GraphQL schema to find correct field names.

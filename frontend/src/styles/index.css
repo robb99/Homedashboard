@@ -891,6 +891,16 @@ body {
   color: var(--status-warning);
 }
 
+.parity-errors {
+  color: var(--status-error);
+  font-weight: 500;
+}
+
+.disk-warning {
+  color: var(--status-warning);
+  margin-left: 4px;
+}
+
 .array-stats {
   display: flex;
   gap: 16px;
@@ -942,6 +952,19 @@ body {
 .system-stat .stat-value {
   font-size: 13px;
   color: var(--text-primary);
+}
+
+/* Temperature color indicators */
+.system-stat .stat-value.temp-normal {
+  color: var(--status-healthy);
+}
+
+.system-stat .stat-value.temp-warning {
+  color: var(--status-warning);
+}
+
+.system-stat .stat-value.temp-critical {
+  color: var(--status-error);
 }
 
 .item-list.compact {

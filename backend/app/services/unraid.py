@@ -218,7 +218,7 @@ class UnraidService:
                     system = self._parse_system_data(system_data)
 
                 # Determine overall status
-                status = self._determine_status(array, containers, vms)
+                status = self._determine_status(array, containers, vms, system)
 
                 result = UnraidStatus(
                     status=status,
@@ -246,7 +246,7 @@ class UnraidService:
 
     async def _fetch_array_status(self, client: httpx.AsyncClient, settings) -> Optional[dict]:
         """Fetch array status from Unraid GraphQL API."""
-        # Unraid 7.x - simplified query with only confirmed fields
+        # Unraid 7.2+ - expanded query with parity, disk health, and temperature
         query = """
         query {
             array {
@@ -258,12 +258,23 @@ class UnraidService:
                         free
                     }
                 }
+                parities {
+                    name
+                    size
+                    status
+                    temp
+                    numErrors
+                }
             }
             disks {
                 name
                 device
                 size
                 type
+                status
+                temp
+                smartStatus
+                numErrors
             }
         }
         """
@@ -318,8 +329,7 @@ class UnraidService:
 
     async def _fetch_system_info(self, client: httpx.AsyncClient, settings) -> Optional[dict]:
         """Fetch system info from Unraid GraphQL API."""
-        # Unraid 7.x - try to find available system metrics
-        # Based on schema discovery, try different field structures
+        # Unraid 7.2+ - expanded query with CPU, memory, and uptime
         query = """
         query {
             vars {
@@ -327,6 +337,16 @@ class UnraidService:
                 regTy
             }
             info {
+                cpu {
+                    threads
+                    temperature
+                }
+                memory {
+                    total
+                    used
+                    free
+                    available
+                }
                 os {
                     uptime
                 }
@@ -337,11 +357,16 @@ class UnraidService:
         if result:
             return result
 
-        # Fallback to just version
+        # Fallback to just version and uptime if expanded fields not available
         fallback_query = """
         query {
             vars {
                 version
+            }
+            info {
+                os {
+                    uptime
+                }
             }
         }
         """
@@ -359,19 +384,65 @@ class UnraidService:
             # Use 'color' field as status indicator if 'status' not available
             # Unraid disk colors: green=healthy, yellow=warning, red=error, blue=parity
             disk_status = disk.get("status") or disk.get("color") or "unknown"
+
+            # Parse SMART status - normalize to lowercase for consistency
+            smart_status_raw = disk.get("smartStatus") or "unknown"
+            smart_status = str(smart_status_raw).lower() if smart_status_raw else "unknown"
+
+            # Parse num errors
+            num_errors = disk.get("numErrors") or 0
+            if isinstance(num_errors, str):
+                try:
+                    num_errors = int(num_errors)
+                except:
+                    num_errors = 0
+
             disks.append(UnraidDisk(
                 name=disk.get("name", "Unknown"),
                 device=disk.get("device", ""),
                 size=disk.get("size", 0) or 0,
                 status=disk_status,
                 temp=disk.get("temp"),
+                smart_status=smart_status,
+                num_errors=num_errors,
             ))
 
-        # Parity info not available via GraphQL in Unraid 7.x
-        # Default to "valid" if array is started (no way to query parity status directly)
-        array_state = (array_info.get("state") or "").lower()
-        parity_status = "valid" if array_state == "started" else "unknown"
+        # Parse parity info from array.parities if available (Unraid 7.2+)
+        parities = array_info.get("parities", []) or []
+        parity_status = "unknown"
         parity_progress = None
+        parity_errors = 0
+
+        if parities:
+            # Aggregate parity status from all parity disks
+            parity_statuses = []
+            for parity in parities:
+                p_status = (parity.get("status") or "").lower()
+                if p_status:
+                    parity_statuses.append(p_status)
+                # Sum up parity errors
+                p_errors = parity.get("numErrors") or 0
+                if isinstance(p_errors, str):
+                    try:
+                        p_errors = int(p_errors)
+                    except:
+                        p_errors = 0
+                parity_errors += p_errors
+
+            # Determine overall parity status
+            # Priority: invalid/degraded > syncing/checking > valid
+            if any(s in ["invalid", "degraded", "failed"] for s in parity_statuses):
+                parity_status = "invalid"
+            elif any(s in ["syncing", "checking", "rebuilding"] for s in parity_statuses):
+                parity_status = "syncing"
+            elif any(s in ["valid", "ok", "passed"] for s in parity_statuses):
+                parity_status = "valid"
+            elif parity_statuses:
+                parity_status = parity_statuses[0]  # Use first status if unknown type
+        else:
+            # Fallback: default to "valid" if array is started
+            array_state = (array_info.get("state") or "").lower()
+            parity_status = "valid" if array_state == "started" else "unknown"
 
         # Convert from kilobytes to bytes for proper display
         # Unraid uses decimal KB (1000 bytes), not binary KiB (1024 bytes)
@@ -397,6 +468,7 @@ class UnraidService:
             status=array_info.get("state", "unknown"),
             parity_status=parity_status,
             parity_progress=parity_progress,
+            parity_errors=parity_errors,
             total_size=total,
             used_size=used,
             free_size=free,
@@ -453,6 +525,8 @@ class UnraidService:
         vars_info = data.get("vars", {}) or {}
         info_data = data.get("info", {}) or {}
         os_info = info_data.get("os", {}) or {}
+        cpu_info = info_data.get("cpu", {}) or {}
+        memory_info = info_data.get("memory", {}) or {}
 
         # Parse uptime - try info.os.uptime first
         uptime = os_info.get("uptime") or vars_info.get("uptime") or 0
@@ -462,13 +536,47 @@ class UnraidService:
             except:
                 uptime = 0
 
-        # CPU and memory aren't available via GraphQL in Unraid 7.x
-        # Would need to use a different API or web scraping
+        # Parse CPU temperature (Unraid 7.2+)
+        cpu_temp = cpu_info.get("temperature")
+        if cpu_temp is not None:
+            if isinstance(cpu_temp, str):
+                try:
+                    cpu_temp = int(float(cpu_temp))
+                except:
+                    cpu_temp = None
+
+        # Parse memory metrics (Unraid 7.2+)
+        # Memory values are typically in bytes or KB from the API
+        memory_total = memory_info.get("total") or 0
+        memory_used = memory_info.get("used") or 0
+
+        # Convert to int if string
+        if isinstance(memory_total, str):
+            try:
+                memory_total = int(memory_total)
+            except:
+                memory_total = 0
+        if isinstance(memory_used, str):
+            try:
+                memory_used = int(memory_used)
+            except:
+                memory_used = 0
+
+        # Calculate memory percentage
+        memory_percent = 0.0
+        if memory_total > 0:
+            memory_percent = (memory_used / memory_total) * 100
+
+        # CPU usage not directly available from GraphQL
+        # Could potentially calculate from /proc/stat in future
+        cpu_usage = 0.0
+
         return UnraidSystem(
-            cpu_usage=0.0,
-            memory_total=0,
-            memory_used=0,
-            memory_percent=0.0,
+            cpu_usage=cpu_usage,
+            cpu_temp=cpu_temp,
+            memory_total=memory_total,
+            memory_used=memory_used,
+            memory_percent=memory_percent,
             uptime=uptime if uptime else 0,
             version=vars_info.get("version", ""),
         )
@@ -478,28 +586,67 @@ class UnraidService:
         array: Optional[UnraidArray],
         containers: list,
         vms: list,
+        system: Optional[UnraidSystem] = None,
     ) -> StatusLevel:
-        """Determine overall status based on array, containers, and VMs."""
+        """Determine overall status based on array, containers, VMs, and system health.
+
+        Temperature thresholds:
+        - Disk: Warning > 50C, Critical > 60C
+        - CPU: Warning > 80C, Critical > 95C
+        """
         if not array:
             return StatusLevel.UNKNOWN
+
+        # Track if we have warnings (but not errors)
+        has_warning = False
 
         # Check array status (case-insensitive)
         if array.status.lower() != "started":
             return StatusLevel.ERROR
 
-        # Check for disk faults
+        # Check for disk faults and SMART failures
         for disk in array.disks:
+            # Disk fault = ERROR
             if disk.status.lower() == "fault":
                 return StatusLevel.ERROR
 
+            # SMART failed = ERROR
+            if disk.smart_status.lower() in ["failed", "fail"]:
+                return StatusLevel.ERROR
+
+            # SMART errors > 0 = WARNING
+            if disk.num_errors > 0:
+                has_warning = True
+
+            # Disk temperature checks
+            if disk.temp is not None:
+                if disk.temp > 60:  # Critical temperature
+                    return StatusLevel.ERROR
+                elif disk.temp > 50:  # Warning temperature
+                    has_warning = True
+
         # Check parity status
-        if array.parity_status.lower() == "invalid":
+        parity_lower = array.parity_status.lower()
+        if parity_lower in ["invalid", "degraded", "failed"]:
             return StatusLevel.ERROR
-        if array.parity_status.lower() == "syncing":
+        if parity_lower in ["syncing", "checking", "rebuilding"]:
+            has_warning = True
+
+        # Check parity errors
+        if array.parity_errors > 0:
+            has_warning = True
+
+        # Check CPU temperature if available
+        if system and system.cpu_temp is not None:
+            if system.cpu_temp > 95:  # Critical CPU temperature
+                return StatusLevel.ERROR
+            elif system.cpu_temp > 80:  # Warning CPU temperature
+                has_warning = True
+
+        # Return WARNING if any warning conditions were met
+        if has_warning:
             return StatusLevel.WARNING
 
-        # Check for stopped containers or VMs that might be expected to run
-        # For now, just return healthy if array is started
         return StatusLevel.HEALTHY
 
 
