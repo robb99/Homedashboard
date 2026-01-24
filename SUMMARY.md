@@ -573,8 +573,16 @@ docker-compose up -d --build
 
 - **Verified Working (Unraid 7.2.3):**
   - Status: healthy
-  - Array: STARTED with capacity (97TB total, 72TB used)
+  - Array: STARTED with capacity
   - 12 disks detected
   - 14 containers (12 running)
   - 1 VM (Debian, running)
   - Version: 7.2.3
+
+- **Known Issues (Needs Fix):**
+  1. **Parity Status:** Shows "Parity: unknown" in red - should not be red if just unknown/not applicable
+  2. **CPU/RAM at 0%:** GraphQL query not returning CPU/memory usage data - need to discover correct fields
+  3. **No Uptime:** Unraid 7.x `Vars` type doesn't have `uptime` field - need alternative query
+  4. **Container Status Colors:** Containers show "running/exited" but no green/red color coding for consistency with other cards
+  5. **Container Truncation:** Shows "+8 more" but containers list is truncated - display issue
+  6. **Capacity Units Wrong:** Shows "24.1GB free" but should be "25.9TB free / 72.1TB used" - values are in kilobytes, need proper unit conversion to TB
