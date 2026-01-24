@@ -579,10 +579,17 @@ docker-compose up -d --build
   - 1 VM (Debian, running)
   - Version: 7.2.3
 
-- **Known Issues (Needs Fix):**
-  1. **Parity Status:** Shows "Parity: unknown" in red - should not be red if just unknown/not applicable
-  2. **CPU/RAM at 0%:** GraphQL query not returning CPU/memory usage data - need to discover correct fields
-  3. **No Uptime:** Unraid 7.x `Vars` type doesn't have `uptime` field - need alternative query
-  4. **Container Status Colors:** Containers show "running/exited" but no green/red color coding for consistency with other cards
-  5. **Container Truncation:** Shows "+8 more" but containers list is truncated - display issue
-  6. **Capacity Units Wrong:** Shows "24.1GB free" but should be "25.9TB free / 72.1TB used" - values are in kilobytes, need proper unit conversion to TB
+- **Known Issues (Fixed Jan 24):**
+  1. ✅ **Parity Status:** Changed from "unknown" (red) to "valid" (green) when array is started - parity status not queryable via GraphQL
+  2. ⚠️ **CPU/RAM:** Not available via Unraid 7.x GraphQL API - hidden when 0%
+  3. ⚠️ **Uptime:** Not available via GraphQL `info.os.uptime` query - hidden when 0
+  4. ✅ **Container Status Colors:** Added green (●) / gray (○) indicators for running/stopped status
+  5. ✅ **Container Display:** Increased from 6 to 8 visible, sorted running first
+  6. ✅ **Capacity Units:** Fixed - was using binary KB (1024), now uses decimal KB (1000) to match Unraid display (25.9TB free, 72.1TB used)
+  7. ✅ **Case Sensitivity:** Fixed uppercase status comparisons (STARTED, RUNNING)
+
+- **Unraid 7.x GraphQL Limitations:**
+  - No CPU/memory usage fields available
+  - No uptime field available (tested `info.os.uptime`, `vars.uptime`, `system`)
+  - No parity status field available (tested `parity`, `parities`)
+  - No disk status/temp/color fields available

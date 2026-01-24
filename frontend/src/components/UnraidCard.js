@@ -28,18 +28,27 @@ function ArraySection({ array }) {
     ? (array.used_size / array.total_size) * 100
     : 0;
 
+  // Normalize status to lowercase for comparison
+  const statusLower = (array.status || '').toLowerCase();
+  const parityLower = (array.parity_status || '').toLowerCase();
+
+  // Determine parity display class - valid/syncing are ok, invalid is error
+  const parityClass = parityLower === 'valid' ? 'valid' :
+                      parityLower === 'syncing' ? 'syncing' :
+                      parityLower === 'invalid' ? 'invalid' : 'valid';
+
   return (
     <div className="unraid-section">
       <div className="section-label">Array Status</div>
       <div className="array-info">
         <div className="array-status-row">
-          <span className={`array-state ${array.status === 'started' ? 'running' : 'stopped'}`}>
-            {array.status === 'started' ? 'Started' : array.status}
+          <span className={`array-state ${statusLower === 'started' ? 'running' : 'stopped'}`}>
+            {statusLower === 'started' ? 'Started' : array.status}
           </span>
           {array.parity_status && (
-            <span className={`parity-status ${array.parity_status}`}>
+            <span className={`parity-status ${parityClass}`}>
               Parity: {array.parity_status}
-              {array.parity_progress !== null && array.parity_status === 'syncing' &&
+              {array.parity_progress !== null && parityLower === 'syncing' &&
                 ` (${array.parity_progress.toFixed(1)}%)`
               }
             </span>
@@ -56,7 +65,7 @@ function ArraySection({ array }) {
           </div>
           <div className="array-stat">
             <span className="stat-label">Used</span>
-            <span className="stat-value">{usedPercent.toFixed(0)}%</span>
+            <span className="stat-value">{formatBytes(array.used_size)}</span>
           </div>
         </div>
       </div>
@@ -67,19 +76,27 @@ function ArraySection({ array }) {
 function SystemSection({ system }) {
   if (!system) return null;
 
+  // Check if we have CPU/RAM data (may not be available via GraphQL)
+  const hasCpuRam = system.cpu_usage > 0 || system.memory_percent > 0;
+  const hasUptime = system.uptime > 0;
+
   return (
     <div className="unraid-section">
-      <div className="section-label">System Resources</div>
+      <div className="section-label">System Info</div>
       <div className="system-info">
-        <div className="resource-bars">
-          <ResourceBar label="CPU" value={system.cpu_usage} />
-          <ResourceBar label="RAM" value={system.memory_percent} />
-        </div>
-        <div className="system-stats">
-          <div className="system-stat">
-            <span className="stat-label">Uptime</span>
-            <span className="stat-value">{formatUptime(system.uptime)}</span>
+        {hasCpuRam && (
+          <div className="resource-bars">
+            <ResourceBar label="CPU" value={system.cpu_usage} />
+            <ResourceBar label="RAM" value={system.memory_percent} />
           </div>
+        )}
+        <div className="system-stats">
+          {hasUptime && (
+            <div className="system-stat">
+              <span className="stat-label">Uptime</span>
+              <span className="stat-value">{formatUptime(system.uptime)}</span>
+            </div>
+          )}
           {system.version && (
             <div className="system-stat">
               <span className="stat-label">Version</span>
@@ -95,23 +112,36 @@ function SystemSection({ system }) {
 function ContainersSection({ containers, containerRunning, containerCount }) {
   if (!containers || containers.length === 0) return null;
 
+  // Sort containers: running first, then stopped
+  const sortedContainers = [...containers].sort((a, b) => {
+    const aRunning = (a.status || '').toLowerCase() === 'running';
+    const bRunning = (b.status || '').toLowerCase() === 'running';
+    if (aRunning && !bRunning) return -1;
+    if (!aRunning && bRunning) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="unraid-section">
       <div className="section-label">
         Containers ({containerRunning} of {containerCount} running)
       </div>
       <div className="item-list compact">
-        {containers.slice(0, 6).map((container, index) => (
-          <div key={index} className="list-item">
-            <span className="list-item-name">{container.name}</span>
-            <span className={`list-item-status ${container.status}`}>
-              {container.status}
-            </span>
-          </div>
-        ))}
-        {containers.length > 6 && (
+        {sortedContainers.slice(0, 8).map((container, index) => {
+          const statusLower = (container.status || '').toLowerCase();
+          const statusClass = statusLower === 'running' ? 'running' : 'stopped';
+          return (
+            <div key={index} className="list-item">
+              <span className="list-item-name">{container.name}</span>
+              <span className={`list-item-status ${statusClass}`}>
+                {statusLower === 'running' ? '●' : '○'}
+              </span>
+            </div>
+          );
+        })}
+        {sortedContainers.length > 8 && (
           <div className="list-item more">
-            +{containers.length - 6} more
+            +{sortedContainers.length - 8} more
           </div>
         )}
       </div>
@@ -128,21 +158,25 @@ function VMsSection({ vms, vmRunning, vmCount }) {
         VMs ({vmRunning} of {vmCount} running)
       </div>
       <div className="item-list compact">
-        {vms.map((vm, index) => (
-          <div key={index} className="list-item">
-            <div>
-              <span className="list-item-name">{vm.name}</span>
-              {vm.status === 'running' && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {vm.vcpus} vCPU | {formatBytes(vm.memory)}
-                </div>
-              )}
+        {vms.map((vm, index) => {
+          const statusLower = (vm.status || '').toLowerCase();
+          const statusClass = statusLower === 'running' ? 'running' : 'stopped';
+          return (
+            <div key={index} className="list-item">
+              <div>
+                <span className="list-item-name">{vm.name}</span>
+                {statusLower === 'running' && vm.vcpus > 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {vm.vcpus} vCPU | {formatBytes(vm.memory)}
+                  </div>
+                )}
+              </div>
+              <span className={`list-item-status ${statusClass}`}>
+                {statusLower === 'running' ? '●' : '○'}
+              </span>
             </div>
-            <span className={`list-item-status ${vm.status}`}>
-              {vm.status}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

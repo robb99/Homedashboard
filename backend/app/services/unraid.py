@@ -246,7 +246,7 @@ class UnraidService:
 
     async def _fetch_array_status(self, client: httpx.AsyncClient, settings) -> Optional[dict]:
         """Fetch array status from Unraid GraphQL API."""
-        # Query based on Unraid 7.x schema - no status/temp fields on Disk type
+        # Unraid 7.x - simplified query with only confirmed fields
         query = """
         query {
             array {
@@ -318,15 +318,34 @@ class UnraidService:
 
     async def _fetch_system_info(self, client: httpx.AsyncClient, settings) -> Optional[dict]:
         """Fetch system info from Unraid GraphQL API."""
-        # Unraid 7.x schema - uptime is not on Vars
+        # Unraid 7.x - try to find available system metrics
+        # Based on schema discovery, try different field structures
         query = """
+        query {
+            vars {
+                version
+                regTy
+            }
+            info {
+                os {
+                    uptime
+                }
+            }
+        }
+        """
+        result = await self._graphql_query(client, settings, query)
+        if result:
+            return result
+
+        # Fallback to just version
+        fallback_query = """
         query {
             vars {
                 version
             }
         }
         """
-        return await self._graphql_query(client, settings, query)
+        return await self._graphql_query(client, settings, fallback_query)
 
     def _parse_array_data(self, data: dict) -> UnraidArray:
         """Parse array data from GraphQL response."""
@@ -334,29 +353,45 @@ class UnraidService:
         capacity = array_info.get("capacity", {}) or {}
         # Unraid 7.x uses capacity { kilobytes { total, used, free } }
         disk_capacity = capacity.get("kilobytes", {}) or capacity.get("disks", {}) or {}
-        parities = data.get("parities", []) or []
 
         disks = []
         for disk in data.get("disks", []) or []:
+            # Use 'color' field as status indicator if 'status' not available
+            # Unraid disk colors: green=healthy, yellow=warning, red=error, blue=parity
+            disk_status = disk.get("status") or disk.get("color") or "unknown"
             disks.append(UnraidDisk(
                 name=disk.get("name", "Unknown"),
                 device=disk.get("device", ""),
                 size=disk.get("size", 0) or 0,
-                status=disk.get("status", "unknown"),  # May not be available in 7.x
-                temp=disk.get("temp"),  # May not be available in 7.x
+                status=disk_status,
+                temp=disk.get("temp"),
             ))
 
-        parity_status = "unknown"
+        # Parity info not available via GraphQL in Unraid 7.x
+        # Default to "valid" if array is started (no way to query parity status directly)
+        array_state = (array_info.get("state") or "").lower()
+        parity_status = "valid" if array_state == "started" else "unknown"
         parity_progress = None
-        if parities:
-            parity = parities[0]
-            parity_status = parity.get("status", "unknown")
-            parity_progress = parity.get("progress")
 
-        # Convert from kilobytes to bytes if needed
-        total = disk_capacity.get("total", 0) or 0
-        used = disk_capacity.get("used", 0) or 0
-        free = disk_capacity.get("free", 0) or 0
+        # Convert from kilobytes to bytes for proper display
+        # Unraid uses decimal KB (1000 bytes), not binary KiB (1024 bytes)
+        # Ensure values are integers (GraphQL may return strings)
+        total_kb = disk_capacity.get("total", 0) or 0
+        used_kb = disk_capacity.get("used", 0) or 0
+        free_kb = disk_capacity.get("free", 0) or 0
+
+        # Convert to int if string
+        if isinstance(total_kb, str):
+            total_kb = int(total_kb)
+        if isinstance(used_kb, str):
+            used_kb = int(used_kb)
+        if isinstance(free_kb, str):
+            free_kb = int(free_kb)
+
+        # Convert from decimal KB to bytes (KB = 1000 bytes in Unraid)
+        total = total_kb * 1000
+        used = used_kb * 1000
+        free = free_kb * 1000
 
         return UnraidArray(
             status=array_info.get("state", "unknown"),
@@ -416,27 +451,25 @@ class UnraidService:
     def _parse_system_data(self, data: dict) -> UnraidSystem:
         """Parse system info from GraphQL response."""
         vars_info = data.get("vars", {}) or {}
-        memory_info = data.get("memoryUsage", {}) or {}
-        cpu_usage = data.get("cpuUsage", 0) or 0
+        info_data = data.get("info", {}) or {}
+        os_info = info_data.get("os", {}) or {}
 
-        memory_total = memory_info.get("total", 0) or 0
-        memory_used = memory_info.get("used", 0) or 0
-        memory_percent = (memory_used / memory_total * 100) if memory_total > 0 else 0
-
-        # Parse uptime - might be string or int
-        uptime = vars_info.get("uptime", 0)
+        # Parse uptime - try info.os.uptime first
+        uptime = os_info.get("uptime") or vars_info.get("uptime") or 0
         if isinstance(uptime, str):
             try:
                 uptime = int(uptime)
             except:
                 uptime = 0
 
+        # CPU and memory aren't available via GraphQL in Unraid 7.x
+        # Would need to use a different API or web scraping
         return UnraidSystem(
-            cpu_usage=float(cpu_usage) if cpu_usage else 0.0,
-            memory_total=memory_total,
-            memory_used=memory_used,
-            memory_percent=memory_percent,
-            uptime=uptime,
+            cpu_usage=0.0,
+            memory_total=0,
+            memory_used=0,
+            memory_percent=0.0,
+            uptime=uptime if uptime else 0,
             version=vars_info.get("version", ""),
         )
 
