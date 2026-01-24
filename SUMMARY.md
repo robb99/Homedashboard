@@ -523,3 +523,58 @@ docker-compose up -d --build
 ### Remaining Issues
 
 1.  **Docker Service:** Still reports an error: `Failed to connect to Docker: Error while fetching server API version: Not supported URL scheme http+docker`.
+
+---
+
+### 20. New Feature: UNRAID Card Implementation
+**Date:** 2026-01-24
+**Branch:** main
+**Summary:** Add UNRAID service card to display array status, Docker containers, VMs, and system resources using Unraid's GraphQL API (6.12+).
+**What Worked:** Full implementation complete and working with Unraid 7.2.3. **(IMPLEMENTED)**
+**What Failed:** Initial GraphQL queries failed due to schema differences; fixed by discovering correct Unraid 7.x schema.
+
+- **Backend Files Created:**
+  - `backend/app/services/unraid.py` - UNRAID service with GraphQL client, cookie-based auth, CSRF token extraction from HTML
+
+- **Backend Files Modified:**
+  - `backend/app/config.py` - Added `unraid_host`, `unraid_username`, `unraid_password`, `unraid_verify_ssl`, `unraid_enabled`; fixed `.env` path detection for Docker
+  - `backend/app/models/schemas.py` - Added `UnraidDisk`, `UnraidArray`, `UnraidContainer`, `UnraidVM`, `UnraidSystem`, `UnraidStatus` models
+  - `backend/app/services/__init__.py` - Exported `unraid_service`
+  - `backend/app/services/test_connections.py` - Added `test_unraid_connection()` with CSRF token handling
+  - `backend/app/routers/dashboard.py` - Added `/api/unraid` endpoint
+  - `backend/app/routers/config.py` - Added UNRAID to config handling
+  - `backend/app/main.py` - Added UNRAID to `poll_services()`
+  - `backend/app/utils/runtime_config.py` - Added `unraid_enabled` to defaults
+  - `backend/app/utils/env_manager.py` - Fixed `.env` path for Docker persistence (`/app/config/.env`)
+
+- **Frontend Files Created:**
+  - `frontend/src/components/UnraidCard.js` - Card with 4-section layout (Array Status, System Resources, Containers, VMs)
+  - `frontend/src/components/setup/UnraidSetup.js` - Setup wizard form
+
+- **Frontend Files Modified:**
+  - `frontend/src/components/Dashboard.js` - Added `UnraidCard` import and rendering
+  - `frontend/src/components/setup/SetupWizard.js` - Added `UnraidSetup` section
+  - `frontend/src/styles/index.css` - Added UNRAID-specific CSS styles
+
+- **Environment Files Modified:**
+  - `.env.example` - Added UNRAID configuration variables
+  - `docker-compose.yml` - Removed UNRAID env vars (pydantic reads from mounted .env file)
+
+- **Bugs Fixed During Implementation:**
+  1. **Config Persistence:** `.env` path was incorrect in Docker; fixed to use `/app/config/.env` (mounted volume)
+  2. **CSRF Token:** Unraid requires CSRF token from HTML response (not cookies); added regex extraction
+  3. **GraphQL Schema (Unraid 7.x):**
+     - `docker { containers { names, state, image } }` instead of `dockerContainers { name, ... }`
+     - `vms { domain { name, state } }` nested structure for VMs
+     - `array { capacity { kilobytes { ... } } }` instead of `capacity { disks { ... } }`
+     - No `status`/`temp` fields on `Disk` type
+     - No `uptime` field on `Vars` type
+  4. **Case-Sensitive Status:** GraphQL returns uppercase status values (STARTED, RUNNING); fixed comparisons
+
+- **Verified Working (Unraid 7.2.3):**
+  - Status: healthy
+  - Array: STARTED with capacity (97TB total, 72TB used)
+  - 12 disks detected
+  - 14 containers (12 running)
+  - 1 VM (Debian, running)
+  - Version: 7.2.3

@@ -21,6 +21,7 @@ DEFAULT_CONFIG = {
     "calendar_enabled": True,
     "weather_enabled": True,
     "news_enabled": True,
+    "unraid_enabled": True,
 }
 
 

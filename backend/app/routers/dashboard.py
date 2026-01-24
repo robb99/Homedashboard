@@ -11,6 +11,7 @@ from app.models.schemas import (
     CalendarStatus,
     WeatherStatus,
     NewsStatus,
+    UnraidStatus,
     StatusLevel,
 )
 from app.services import (
@@ -21,6 +22,7 @@ from app.services import (
     calendar_service,
     weather_service,
     news_service,
+    unraid_service,
 )
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
@@ -57,12 +59,18 @@ async def get_dashboard():
     else:
         calendar = CalendarStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
 
+    if settings.unraid_enabled:
+        unraid = await unraid_service.get_status()
+    else:
+        unraid = UnraidStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+
     return DashboardStatus(
         unifi=unifi,
         proxmox=proxmox,
         plex=plex,
         docker=docker,
         calendar=calendar,
+        unraid=unraid,
         last_updated=datetime.now(),
     )
 
@@ -109,6 +117,12 @@ async def get_news():
     return await news_service.get_status()
 
 
+@router.get("/unraid", response_model=UnraidStatus)
+async def get_unraid():
+    """Get Unraid server status."""
+    return await unraid_service.get_status()
+
+
 @router.post("/refresh")
 async def refresh_all():
     """Force refresh all cached data for enabled services."""
@@ -128,6 +142,8 @@ async def refresh_all():
         await docker_service.get_status(use_cache=False)
     if settings.calendar_enabled:
         await calendar_service.get_status(use_cache=False)
+    if settings.unraid_enabled:
+        await unraid_service.get_status(use_cache=False)
 
     return {"status": "refreshed", "timestamp": datetime.now().isoformat()}
 

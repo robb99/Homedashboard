@@ -7,6 +7,7 @@ import { DockerSetup } from './DockerSetup';
 import { CalendarSetup } from './CalendarSetup';
 import { WeatherSetup } from './WeatherSetup';
 import { NewsSetup } from './NewsSetup';
+import { UnraidSetup } from './UnraidSetup';
 import '../../styles/setup.css';
 
 export function SetupWizard({ onComplete, onOpenLogs }) {
@@ -146,6 +147,15 @@ export function SetupWizard({ onComplete, onOpenLogs }) {
             testing={testingService === 'news'}
             testResult={testResults.news}
             isConfigured={isServiceConfigured('news')}
+          />
+
+          <UnraidSetup
+            config={config}
+            updateField={updateField}
+            onTest={testConnection}
+            testing={testingService === 'unraid'}
+            testResult={testResults.unraid}
+            isConfigured={isServiceConfigured('unraid')}
           />
         </div>
 

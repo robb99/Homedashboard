@@ -6,6 +6,7 @@ import { PlexCard } from './PlexCard';
 import { DockerCard } from './DockerCard';
 import { CalendarCard } from './CalendarCard';
 import { DailyByteCard } from './DailyByteCard';
+import { UnraidCard } from './UnraidCard';
 import { WeatherWidget } from './WeatherWidget';
 import { NewsWidget } from './NewsWidget';
 import { DateTimeWidget } from './DateTimeWidget';
@@ -48,6 +49,9 @@ export function Dashboard({ onOpenSetup }) {
         )}
         {config?.docker_enabled && data?.docker?.status !== 'unknown' && (
           <DockerCard data={data?.docker} />
+        )}
+        {config?.unraid_enabled && data?.unraid?.status !== 'unknown' && (
+          <UnraidCard data={data?.unraid} />
         )}
         {config?.plex_enabled && data?.plex?.status !== 'unknown' && (
           <PlexCard data={data?.plex} />

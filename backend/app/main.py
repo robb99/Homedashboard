@@ -16,6 +16,7 @@ from app.services import (
     plex_service,
     docker_service,
     calendar_service,
+    unraid_service,
 )
 from app.utils.log_buffer import log_buffer
 
@@ -46,6 +47,8 @@ async def poll_services():
             await docker_service.get_status(use_cache=False)
         if settings.calendar_enabled:
             await calendar_service.get_status(use_cache=False)
+        if settings.unraid_enabled:
+            await unraid_service.get_status(use_cache=False)
         logger.info("Polling complete")
     except Exception as e:
         logger.error(f"Error during polling: {e}")

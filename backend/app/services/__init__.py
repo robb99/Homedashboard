@@ -6,3 +6,4 @@ from app.services.docker_service import docker_service
 from app.services.calendar import calendar_service
 from app.services.weather import weather_service
 from app.services.news import news_service
+from app.services.unraid import unraid_service

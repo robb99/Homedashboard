@@ -366,3 +366,181 @@ async def test_news_connection(
             message="Connection error",
             details=str(e),
         )
+
+
+async def test_unraid_connection(
+    host: str,
+    username: str,
+    password: str,
+    verify_ssl: bool = False,
+) -> TestConnectionResult:
+    """Test Unraid connection with login and GraphQL query."""
+    import re
+
+    if not host or not username or not password:
+        return TestConnectionResult(
+            success=False,
+            message="Missing required fields",
+            details="Host, username, and password are required",
+        )
+
+    try:
+        async with httpx.AsyncClient(verify=verify_ssl, timeout=15.0) as client:
+            login_url = f"{host}/login"
+
+            # First get the login page for CSRF token
+            page_response = await client.get(login_url)
+            csrf_token = None
+            if page_response.status_code == 200:
+                csrf_match = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', page_response.text)
+                if csrf_match:
+                    csrf_token = csrf_match.group(1)
+
+            # Build login data
+            login_data = {"username": username, "password": password}
+            if csrf_token:
+                login_data["csrf_token"] = csrf_token
+
+            # Attempt login
+            response = await client.post(
+                login_url,
+                data=login_data,
+                follow_redirects=True,
+            )
+
+            # Check for session cookies
+            cookies = dict(client.cookies)
+            logger.info(f"Unraid cookies received: {list(cookies.keys())}")
+
+            if response.status_code not in (200, 302) or not cookies:
+                return TestConnectionResult(
+                    success=False,
+                    message="Authentication failed",
+                    details="Invalid username or password",
+                )
+
+            # Extract CSRF token - check cookies, headers, and HTML
+            csrf_token = (
+                cookies.get("csrf_token") or
+                cookies.get("_csrf") or
+                cookies.get("XSRF-TOKEN") or
+                cookies.get("csrftoken") or
+                ""
+            )
+
+            # Check response headers for CSRF token
+            if not csrf_token:
+                csrf_token = response.headers.get("x-csrf-token", "")
+            if not csrf_token:
+                csrf_token = response.headers.get("csrf-token", "")
+
+            # Try to extract from HTML meta tag or hidden input
+            if not csrf_token:
+                html = response.text
+                # Look for meta tag: <meta name="csrf-token" content="...">
+                meta_match = re.search(r'<meta[^>]+name=["\']csrf-token["\'][^>]+content=["\']([^"\']+)["\']', html)
+                if meta_match:
+                    csrf_token = meta_match.group(1)
+                else:
+                    # Look for hidden input with various names
+                    input_match = re.search(r'<input[^>]+name=["\'](?:csrf_token|_csrf|csrfmiddlewaretoken)["\'][^>]+value=["\']([^"\']+)["\']', html)
+                    if input_match:
+                        csrf_token = input_match.group(1)
+                    else:
+                        # Try var csrf_token = "..."
+                        var_match = re.search(r'var\s+csrf_token\s*=\s*["\']([^"\']+)["\']', html)
+                        if var_match:
+                            csrf_token = var_match.group(1)
+
+            logger.info(f"Unraid CSRF token found: {bool(csrf_token)}, length: {len(csrf_token) if csrf_token else 0}")
+
+            # Test GraphQL endpoint with a simple vars query (commonly available)
+            graphql_url = f"{host}/graphql"
+            query = """
+            query {
+                vars {
+                    version
+                }
+            }
+            """
+
+            # Include CSRF token in headers - try multiple header names
+            headers = {}
+            if csrf_token:
+                headers["x-csrf-token"] = csrf_token
+                headers["csrf-token"] = csrf_token
+                headers["X-XSRF-TOKEN"] = csrf_token
+
+            gql_response = await client.post(
+                graphql_url,
+                json={"query": query},
+                cookies=cookies,
+                headers=headers,
+            )
+            logger.info(f"Unraid GraphQL response status: {gql_response.status_code}")
+
+            if gql_response.status_code == 200:
+                data = gql_response.json()
+
+                # Check if we got valid data
+                data_obj = data.get("data") if data else None
+
+                if "errors" in data and not data_obj:
+                    # Try alternative query
+                    alt_query = """
+                    query {
+                        array {
+                            state
+                        }
+                    }
+                    """
+                    alt_response = await client.post(
+                        graphql_url,
+                        json={"query": alt_query},
+                        cookies=cookies,
+                        headers=headers,
+                    )
+                    if alt_response.status_code == 200:
+                        alt_data = alt_response.json()
+                        alt_data_obj = alt_data.get("data") if alt_data else None
+                        if alt_data_obj:
+                            array_obj = alt_data_obj.get("array") if alt_data_obj else None
+                            state = array_obj.get("state", "unknown") if array_obj else "unknown"
+                            return TestConnectionResult(
+                                success=True,
+                                message="Successfully connected to Unraid",
+                                details=f"Array state: {state}",
+                            )
+                    return TestConnectionResult(
+                        success=False,
+                        message="GraphQL query failed",
+                        details=str(data.get("errors", "Unknown error")),
+                    )
+
+                # Extract version if available
+                vars_obj = data_obj.get("vars") if data_obj else None
+                version = vars_obj.get("version", "connected") if vars_obj else "connected"
+                return TestConnectionResult(
+                    success=True,
+                    message="Successfully connected to Unraid",
+                    details=f"Unraid version: {version}",
+                )
+            else:
+                return TestConnectionResult(
+                    success=False,
+                    message=f"GraphQL request failed with status {gql_response.status_code}",
+                    details=gql_response.text[:200] if gql_response.text else None,
+                )
+
+    except httpx.ConnectError:
+        return TestConnectionResult(
+            success=False,
+            message="Connection failed",
+            details=f"Could not connect to {host}. Check the host URL.",
+        )
+    except Exception as e:
+        return TestConnectionResult(
+            success=False,
+            message="Connection error",
+            details=str(e),
+        )

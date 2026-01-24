@@ -25,6 +25,7 @@ from app.services.test_connections import (
     test_calendar_connection,
     test_weather_connection,
     test_news_connection,
+    test_unraid_connection,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ MASKED_FIELDS = {
     "proxmox_token_value",
     "plex_token",
     "news_api_key",
+    "unraid_password",
 }
 
 MASK_VALUE = "********"
@@ -90,6 +92,12 @@ async def get_config_status():
     news_configured = _is_configured(settings.news_api_key)
     news_has_creds = news_configured
 
+    unraid_configured = _is_configured(settings.unraid_host)
+    unraid_has_creds = all([
+        _is_configured(settings.unraid_username),
+        _is_configured(settings.unraid_password),
+    ])
+
     # First run if no services are configured
     any_service_configured = any([
         unifi_configured and unifi_has_creds,
@@ -98,6 +106,7 @@ async def get_config_status():
         calendar_configured,
         weather_configured,
         news_configured,
+        unraid_configured and unraid_has_creds,
     ])
 
     return ConfigStatus(
@@ -109,6 +118,7 @@ async def get_config_status():
         calendar=ServiceConfigStatus(configured=calendar_configured, has_credentials=calendar_has_creds),
         weather=ServiceConfigStatus(configured=weather_configured, has_credentials=weather_has_creds),
         news=ServiceConfigStatus(configured=news_configured, has_credentials=news_has_creds),
+        unraid=ServiceConfigStatus(configured=unraid_configured, has_credentials=unraid_has_creds),
     )
 
 
@@ -153,6 +163,12 @@ async def get_config():
         news_api_key=_mask_value("news_api_key", settings.news_api_key),
         news_country=settings.news_country,
         news_enabled=runtime_config.get("news_enabled", True),
+        # UNRAID
+        unraid_host=settings.unraid_host,
+        unraid_username=settings.unraid_username,
+        unraid_password=_mask_value("unraid_password", settings.unraid_password),
+        unraid_verify_ssl=settings.unraid_verify_ssl,
+        unraid_enabled=runtime_config.get("unraid_enabled", True),
         # Application
         poll_interval=settings.poll_interval,
         cache_ttl=settings.cache_ttl,
@@ -228,6 +244,15 @@ async def save_config(config: ConfigUpdate):
     add_if_set("news_country", config.news_country, "NEWS_COUNTRY")
     if config.news_enabled is not None:
         runtime_updates["news_enabled"] = config.news_enabled
+
+    # UNRAID
+    add_if_set("unraid_host", config.unraid_host, "UNRAID_HOST")
+    add_if_set("unraid_username", config.unraid_username, "UNRAID_USERNAME")
+    add_if_set("unraid_password", config.unraid_password, "UNRAID_PASSWORD")
+    if config.unraid_verify_ssl is not None:
+        updates["UNRAID_VERIFY_SSL"] = str(config.unraid_verify_ssl).lower()
+    if config.unraid_enabled is not None:
+        runtime_updates["unraid_enabled"] = config.unraid_enabled
 
     # Application
     if config.poll_interval is not None:
@@ -325,6 +350,14 @@ async def test_connection(service: str, request: TestConnectionRequest):
     elif service == "news":
         return await test_news_connection(
             api_key=_get_real_value(request.news_api_key or "", settings.news_api_key),
+        )
+
+    elif service == "unraid":
+        return await test_unraid_connection(
+            host=request.unraid_host or "",
+            username=request.unraid_username or "",
+            password=_get_real_value(request.unraid_password or "", settings.unraid_password),
+            verify_ssl=request.unraid_verify_ssl or False,
         )
 
     else:

@@ -11,8 +11,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Path to .env file (project root)
-ENV_FILE_PATH = Path(__file__).parent.parent.parent.parent / ".env"
+# Path to .env file
+# In Docker: /app/config/.env (persistent volume), in development: project root
+def _get_env_path() -> Path:
+    # Check if we're in Docker - use config volume for persistence
+    docker_config_env = Path("/app/config/.env")
+    if docker_config_env.parent.exists() and docker_config_env.parent.is_dir():
+        return docker_config_env
+    # Fallback to relative path from this file (development)
+    return Path(__file__).parent.parent.parent.parent / ".env"
+
+ENV_FILE_PATH = _get_env_path()
 
 
 def read_env() -> Dict[str, str]:

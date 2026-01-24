@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 from functools import lru_cache
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -45,6 +46,13 @@ class Settings(BaseSettings):
     news_country: str = "us"
     news_enabled: bool = True
 
+    # UNRAID
+    unraid_host: str = ""
+    unraid_username: str = ""
+    unraid_password: str = ""
+    unraid_verify_ssl: bool = False
+    unraid_enabled: bool = True
+
     # Application Settings
     poll_interval: int = 30
     cache_ttl: int = 25
@@ -59,7 +67,9 @@ class Settings(BaseSettings):
         return [cal.strip() for cal in self.google_calendar_ids.split(",")]
 
     class Config:
-        env_file = ".env"
+        # In Docker, read from persistent config volume
+        # Check both locations - config volume first, then default
+        env_file = "/app/config/.env" if Path("/app/config").exists() else ".env"
         env_file_encoding = "utf-8"
 
 

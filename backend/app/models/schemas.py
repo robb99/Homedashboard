@@ -194,6 +194,63 @@ class QuotesResponse(BaseModel):
 
 
 # =============================================================================
+# UNRAID MODELS
+# =============================================================================
+class UnraidDisk(BaseModel):
+    name: str
+    device: str
+    size: int = 0
+    used: int = 0
+    free: int = 0
+    status: str = "unknown"  # started, stopped, standby, fault
+    temp: Optional[int] = None
+
+
+class UnraidArray(BaseModel):
+    status: str = "unknown"  # started, stopped
+    parity_status: str = "unknown"  # valid, invalid, syncing
+    parity_progress: Optional[float] = None
+    total_size: int = 0
+    used_size: int = 0
+    free_size: int = 0
+    disks: List[UnraidDisk] = []
+
+
+class UnraidContainer(BaseModel):
+    name: str
+    image: str
+    status: str = "stopped"  # running, stopped, paused
+    uptime: Optional[str] = None
+
+
+class UnraidVM(BaseModel):
+    name: str
+    status: str = "stopped"  # running, stopped, paused
+    vcpus: int = 0
+    memory: int = 0
+
+
+class UnraidSystem(BaseModel):
+    cpu_usage: float = 0.0
+    memory_total: int = 0
+    memory_used: int = 0
+    memory_percent: float = 0.0
+    uptime: int = 0
+    version: str = ""
+
+
+class UnraidStatus(BaseStatus):
+    array: Optional[UnraidArray] = None
+    containers: List[UnraidContainer] = []
+    vms: List[UnraidVM] = []
+    system: Optional[UnraidSystem] = None
+    container_count: int = 0
+    container_running: int = 0
+    vm_count: int = 0
+    vm_running: int = 0
+
+
+# =============================================================================
 # DASHBOARD AGGREGATE
 # =============================================================================
 class DashboardStatus(BaseModel):
@@ -202,6 +259,7 @@ class DashboardStatus(BaseModel):
     plex: PlexStatus
     docker: DockerStatus
     calendar: CalendarStatus
+    unraid: Optional[UnraidStatus] = None
     last_updated: datetime = datetime.now()
 
 
@@ -224,6 +282,7 @@ class ConfigStatus(BaseModel):
     calendar: ServiceConfigStatus = ServiceConfigStatus()
     weather: ServiceConfigStatus = ServiceConfigStatus()
     news: ServiceConfigStatus = ServiceConfigStatus()
+    unraid: ServiceConfigStatus = ServiceConfigStatus()
 
 
 class ConfigUpdate(BaseModel):
@@ -268,6 +327,13 @@ class ConfigUpdate(BaseModel):
     news_api_key: Optional[str] = None
     news_country: Optional[str] = None
     news_enabled: Optional[bool] = None
+
+    # UNRAID
+    unraid_host: Optional[str] = None
+    unraid_username: Optional[str] = None
+    unraid_password: Optional[str] = None
+    unraid_verify_ssl: Optional[bool] = None
+    unraid_enabled: Optional[bool] = None
 
     # Application Settings
     poll_interval: Optional[int] = None
@@ -318,6 +384,13 @@ class ConfigResponse(BaseModel):
     news_country: str = "us"
     news_enabled: bool = True
 
+    # UNRAID
+    unraid_host: str = ""
+    unraid_username: str = ""
+    unraid_password: str = ""  # Will be masked
+    unraid_verify_ssl: bool = False
+    unraid_enabled: bool = True
+
     # Application Settings
     poll_interval: int = 30
     cache_ttl: int = 25
@@ -358,6 +431,12 @@ class TestConnectionRequest(BaseModel):
 
     # News
     news_api_key: Optional[str] = None
+
+    # UNRAID
+    unraid_host: Optional[str] = None
+    unraid_username: Optional[str] = None
+    unraid_password: Optional[str] = None
+    unraid_verify_ssl: Optional[bool] = None
 
 
 class TestConnectionResult(BaseModel):
