@@ -12,12 +12,7 @@ export function useSetup() {
   const [testResults, setTestResults] = useState({});
   const [testingService, setTestingService] = useState(null);
 
-  // Fetch current config on mount
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     setLoading(true);
     try {
       const [configRes, statusRes] = await Promise.all([
@@ -42,7 +37,12 @@ export function useSetup() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch current config on mount
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   // Update config state for a specific field
   const updateField = useCallback((field, value) => {

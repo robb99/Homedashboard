@@ -7,7 +7,7 @@ import { logEvent } from './utils/logger';
 import './styles/index.css';
 
 function App() {
-  const { status, loading, isFirstRun } = useConfigStatus();
+  const { loading, isFirstRun } = useConfigStatus();
   const [showSetup, setShowSetup] = useState(null);
   const [showLogs, setShowLogs] = useState(false);
 

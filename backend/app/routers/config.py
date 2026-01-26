@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 import logging
 
 from app.config import get_settings
-from app.utils.env_manager import read_env, write_env
+from app.utils.env_manager import write_env
 from app.utils.runtime_config import get_runtime_config, save_runtime_config
 from app.services.cache import cache_service
 from app.models.schemas import (

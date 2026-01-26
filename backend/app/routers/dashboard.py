@@ -28,6 +28,14 @@ from app.services import (
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
 
+def _disabled_status(status_cls):
+    return status_cls(
+        status=StatusLevel.UNKNOWN,
+        error_message="Service disabled",
+        last_updated=datetime.now(),
+    )
+
+
 @router.get("/dashboard", response_model=DashboardStatus)
 async def get_dashboard():
     """Get complete dashboard status from all enabled services."""
@@ -37,32 +45,32 @@ async def get_dashboard():
     if settings.unifi_enabled:
         unifi = await unifi_service.get_status()
     else:
-        unifi = UnifiStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        unifi = _disabled_status(UnifiStatus)
 
     if settings.proxmox_enabled:
         proxmox = await proxmox_service.get_status()
     else:
-        proxmox = ProxmoxStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        proxmox = _disabled_status(ProxmoxStatus)
 
     if settings.plex_enabled:
         plex = await plex_service.get_status()
     else:
-        plex = PlexStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        plex = _disabled_status(PlexStatus)
 
     if settings.docker_enabled:
         docker = await docker_service.get_status()
     else:
-        docker = DockerStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        docker = _disabled_status(DockerStatus)
 
     if settings.calendar_enabled:
         calendar = await calendar_service.get_status()
     else:
-        calendar = CalendarStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        calendar = _disabled_status(CalendarStatus)
 
     if settings.unraid_enabled:
         unraid = await unraid_service.get_status()
     else:
-        unraid = UnraidStatus(status=StatusLevel.UNKNOWN, error_message="Service disabled", last_updated=datetime.now())
+        unraid = _disabled_status(UnraidStatus)
 
     return DashboardStatus(
         unifi=unifi,
@@ -132,18 +140,17 @@ async def refresh_all():
     await cache_service.clear()
 
     # Fetch fresh data for enabled services only
-    if settings.unifi_enabled:
-        await unifi_service.get_status(use_cache=False)
-    if settings.proxmox_enabled:
-        await proxmox_service.get_status(use_cache=False)
-    if settings.plex_enabled:
-        await plex_service.get_status(use_cache=False)
-    if settings.docker_enabled:
-        await docker_service.get_status(use_cache=False)
-    if settings.calendar_enabled:
-        await calendar_service.get_status(use_cache=False)
-    if settings.unraid_enabled:
-        await unraid_service.get_status(use_cache=False)
+    services = [
+        (settings.unifi_enabled, unifi_service),
+        (settings.proxmox_enabled, proxmox_service),
+        (settings.plex_enabled, plex_service),
+        (settings.docker_enabled, docker_service),
+        (settings.calendar_enabled, calendar_service),
+        (settings.unraid_enabled, unraid_service),
+    ]
+    for enabled, service in services:
+        if enabled:
+            await service.get_status(use_cache=False)
 
     return {"status": "refreshed", "timestamp": datetime.now().isoformat()}
 

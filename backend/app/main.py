@@ -37,18 +37,17 @@ async def poll_services():
     settings = get_settings()
     logger.info("Polling enabled services...")
     try:
-        if settings.unifi_enabled:
-            await unifi_service.get_status(use_cache=False)
-        if settings.proxmox_enabled:
-            await proxmox_service.get_status(use_cache=False)
-        if settings.plex_enabled:
-            await plex_service.get_status(use_cache=False)
-        if settings.docker_enabled:
-            await docker_service.get_status(use_cache=False)
-        if settings.calendar_enabled:
-            await calendar_service.get_status(use_cache=False)
-        if settings.unraid_enabled:
-            await unraid_service.get_status(use_cache=False)
+        services = [
+            (settings.unifi_enabled, unifi_service),
+            (settings.proxmox_enabled, proxmox_service),
+            (settings.plex_enabled, plex_service),
+            (settings.docker_enabled, docker_service),
+            (settings.calendar_enabled, calendar_service),
+            (settings.unraid_enabled, unraid_service),
+        ]
+        for enabled, service in services:
+            if enabled:
+                await service.get_status(use_cache=False)
         logger.info("Polling complete")
     except Exception as e:
         logger.error(f"Error during polling: {e}")
